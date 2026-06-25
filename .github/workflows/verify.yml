@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-      - run: pnpm --filter rr-lingui typecheck
+      - run: pnpm typecheck
 
   rr-lingui-test:
     name: rr-lingui test
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-      - run: pnpm --filter rr-lingui test
+      - run: pnpm test
 
   rr-lingui-build:
     name: rr-lingui build
@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
-      - run: pnpm --filter rr-lingui build
+      - run: pnpm build
 
   rr-lingui-e2e:
     name: rr-lingui E2E tests
@@ -55,6 +55,7 @@ jobs:
       - name: Install Playwright browsers (if not cached)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @rr-lingui/e2e install-browsers
+      - name: Build rr-lingui library
+        run: pnpm build
       - name: Run E2E Tests
         run: pnpm --filter @rr-lingui/e2e test
-
