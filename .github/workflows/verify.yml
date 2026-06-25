@@ -1,0 +1,60 @@
+# CI verification for the rr-lingui library.
+#
+# Runs validation checks on every push to main and on every pull request,
+# including typechecking, unit testing, compiling the library, and running
+# the integration E2E Playwright tests.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-progress runs for the same ref when a new commit is pushed.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rr-lingui-typecheck:
+    name: rr-lingui typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter rr-lingui typecheck
+
+  rr-lingui-test:
+    name: rr-lingui test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter rr-lingui test
+
+  rr-lingui-build:
+    name: rr-lingui build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter rr-lingui build
+
+  rr-lingui-e2e:
+    name: rr-lingui E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package.json') }}
+      - name: Install Playwright browsers (if not cached)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @rr-lingui/e2e install-browsers
+      - name: Run E2E Tests
+        run: pnpm --filter @rr-lingui/e2e test
+

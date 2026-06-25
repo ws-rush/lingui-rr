@@ -1,0 +1,29 @@
+# Shared setup for GitHub Actions jobs: Node + pnpm + frozen-lockfile install.
+#
+# pnpm version is read from the `packageManager` field in the root package.json
+# (the source of truth), and Node is pinned to 22.22 to match mise.toml.
+name: Setup pnpm
+description: Install Node and pnpm, then install dependencies with a frozen lockfile.
+inputs:
+  node-version:
+    description: Node version to use.
+    required: false
+    default: '22.22'
+
+runs:
+  using: composite
+  steps:
+    # Reads the `packageManager` field — must run before setup-node so the pnpm
+    # cache key resolves correctly.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

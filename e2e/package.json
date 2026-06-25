@@ -1,0 +1,32 @@
+{
+  "name": "@rr-lingui/e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Playwright E2E harness for rr-lingui across all four configurations.",
+  "scripts": {
+    "build:fixtures": "node scripts/build-fixtures.mjs",
+    "test": "node scripts/build-fixtures.mjs && playwright test",
+    "install-browsers": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@lingui/core": "^6.4.0",
+    "@lingui/react": "^6.4.0",
+    "@react-router/node": "^8.0.1",
+    "@react-router/serve": "^8.0.1",
+    "isbot": "^5.1.35",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router": "^8.0.1",
+    "rr-lingui": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@react-router/dev": "^8.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "8.0.16"
+  }
+}

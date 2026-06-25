@@ -1,0 +1,33 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Ensure only one publish job runs at a time.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node and pnpm
+        uses: ./.github/actions/setup-pnpm
+
+      - name: Build library
+        run: pnpm run build
+
+      - name: Configure npm credentials
+        run: pnpm config set //registry.npmjs.org/:_authToken "${NPM_TOKEN}"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish package
+        run: pnpm publish --no-git-checks
