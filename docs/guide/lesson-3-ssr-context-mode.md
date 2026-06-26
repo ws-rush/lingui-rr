@@ -46,14 +46,13 @@ export const i18n = createLinguiRouter({
 
 ## Step 2: Wire the Root Route (`root.tsx`)
 
-Wiring up `root.tsx` is similar to URL-Prefix mode: export the middleware, loader, and shouldRevalidate.
+Wiring up `root.tsx` is similar to URL-Prefix mode: export the middleware and loader.
 
 ```tsx
 // app/root.tsx
 import {
   createLinguiMiddleware, // [!code focus]
   createLinguiRootLoader, // [!code focus]
-  createLinguiShouldRevalidate, // [!code focus]
   LinguiRouterProvider, // [!code focus]
 } from 'lingui-rr'
 import {
@@ -69,9 +68,6 @@ import { i18n } from './lib/i18n'
 
 export const middleware = [createLinguiMiddleware(i18n)] // [!code focus]
 export const loader = createLinguiRootLoader(i18n) // [!code focus]
-
-// CRITICAL: See Step 3 below [!code focus] [!code hl]
-export const shouldRevalidate = createLinguiShouldRevalidate(i18n) // [!code focus] [!code hl]
 
 export function Layout({ children }: { readonly children: React.ReactNode }) {
   const lingui = useRouteLoaderData<typeof loader>('root') // [!code focus]
@@ -110,19 +106,24 @@ export default function App() {
 
 ---
 
-## Step 3: Why `shouldRevalidate` is Required in Context Mode
+## Step 3: Revalidation in Context Mode
 
-When a user switches their language in URL-Prefix mode (e.g. from `/about` to `/en/about`), the URL path changes. React Router detects this path change and automatically runs all loaders (including the root loader) to fetch the new page data and language catalog.
+When a user switches their language in URL-Prefix mode (e.g. from `/about` to `/en/about`), the URL path changes. React Router detects this path change and runs the active loaders, including the root loader that returns the language catalog.
 
-In **Context Mode**, however, switching the language (e.g. from English to Arabic) updates the cookie, but the URL remains exactly the same (`/about`). 
+In **Context Mode**, switching the language updates the cookie while the URL can remain exactly the same (`/about`). React Router v8 revalidates after action submissions by default, so a standard locale-switching `<Form method="post" action="/change-locale">` works without a custom route-level `shouldRevalidate`.
 
-React Router's default behavior skips loader execution for the current page when navigating to the same URL path. Consequently:
-1. The locale cookie updates.
-2. The user remains on the same page.
-3. **Without a custom revalidator, the root loader will not run, and the page will continue rendering in the old language until a hard refresh.**
+`createLinguiShouldRevalidate(i18n)` is optional. Add it only if you want a route-level guardrail that always revalidates after submissions to the locale-switching action route (default `/change-locale`):
 
-By exporting `shouldRevalidate` wired with `createLinguiShouldRevalidate(i18n)`, `lingui-rr` forces a revalidation of the root loader whenever:
-* A submission is sent to the locale-switching action route (default `/change-locale`).
-* The pathname changes.
+```tsx
+import { createLinguiShouldRevalidate } from 'lingui-rr'
 
-This ensures the user's view updates instantly as soon as they select a new language.
+export const shouldRevalidate = createLinguiShouldRevalidate(i18n)
+```
+
+For every non-locale action/navigation, the helper defers to React Router's `defaultShouldRevalidate` value. That means v8 call-site opt-outs still work:
+
+```tsx
+<Form method="post" action="/local-mutation" defaultShouldRevalidate={false} />
+```
+
+Do **not** set `defaultShouldRevalidate={false}` on your locale-switching form unless you also handle refreshing the Lingui root loader yourself.

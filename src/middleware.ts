@@ -113,9 +113,9 @@ export function createLinguiShouldRevalidate(
   options: { actionPath?: string } = {},
 ): ShouldRevalidateFunction {
   const actionPath = (options.actionPath ?? DEFAULT_LOCALE_ACTION_PATH).replace(/\/$/, '')
-  return ({ currentUrl, nextUrl, formAction }: ShouldRevalidateFunctionArgs): boolean => {
+  return ({ currentUrl, formAction, defaultShouldRevalidate }: ShouldRevalidateFunctionArgs): boolean => {
     const formActionPathname = formAction ? new URL(formAction, currentUrl).pathname : null
-    if (!formActionPathname) return currentUrl.pathname !== nextUrl.pathname
+    if (!formActionPathname) return defaultShouldRevalidate
 
     let cleanPath = formActionPathname.replace(/\/$/, '')
     if (cleanPath.endsWith('.data')) {
@@ -129,6 +129,7 @@ export function createLinguiShouldRevalidate(
     }
     const normalizedFormAction = `/${segments.join('/')}`
 
-    return normalizedFormAction === actionPath || currentUrl.pathname !== nextUrl.pathname
+    if (normalizedFormAction === actionPath) return true
+    return defaultShouldRevalidate
   }
 }
