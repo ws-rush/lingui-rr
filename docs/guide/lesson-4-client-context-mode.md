@@ -45,14 +45,13 @@ export const i18n = createLinguiRouter({
 
 ## Step 2: Wire the Root Route (`root.tsx`)
 
-In your root route, export the client data functions. Similar to Lesson 3, `shouldRevalidate` is required so that the root route updates its catalog when the language is changed.
+In your root route, export the client data functions.
 
 ```tsx
 // app/root.tsx
 import {
   createLinguiClientMiddleware, // [!code focus]
   createLinguiRootLoader, // [!code focus]
-  createLinguiShouldRevalidate, // [!code focus]
   LinguiRouterProvider, // [!code focus]
 } from 'lingui-rr'
 import {
@@ -68,7 +67,6 @@ import { i18n } from './lib/i18n'
 
 export const clientMiddleware = [createLinguiClientMiddleware(i18n)] // [!code focus] [!code hl]
 export const clientLoader = createLinguiRootLoader(i18n)             // [!code focus] [!code hl]
-export const shouldRevalidate = createLinguiShouldRevalidate(i18n) // [!code focus]
 
 export function Layout({ children }: { readonly children: React.ReactNode }) {
   const lingui = useRouteLoaderData<typeof clientLoader>('root') // [!code focus]
@@ -104,6 +102,8 @@ export default function App() {
   )
 }
 ```
+
+If you want the optional locale-action revalidation guardrail, add the same `createLinguiShouldRevalidate(i18n)` export shown in Lesson 3.
 
 ---
 

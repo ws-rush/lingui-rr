@@ -72,7 +72,6 @@ Additionally, you must instantiate the client middleware using `createLinguiClie
 import {
   createLinguiClientMiddleware, // [!code focus] [!code hl]
   createLinguiRootLoader, // [!code focus]
-  createLinguiShouldRevalidate, // [!code focus]
   LinguiRouterProvider, // [!code focus]
 } from 'lingui-rr'
 import {
@@ -89,7 +88,6 @@ import { defaultLocale, i18n } from './lib/i18n'
 // Export client-side middleware & loader
 export const clientMiddleware = [createLinguiClientMiddleware(i18n)] // [!code focus] [!code hl]
 export const clientLoader = createLinguiRootLoader(i18n) // [!code focus] [!code hl]
-export const shouldRevalidate = createLinguiShouldRevalidate(i18n) // [!code focus]
 
 export function Layout({ children }: { readonly children: React.ReactNode }) {
   const lingui = useRouteLoaderData<typeof clientLoader>('root') // [!code focus]

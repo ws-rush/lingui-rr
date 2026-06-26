@@ -23,7 +23,7 @@ Cookies that are accessible in both browser and server runtime environments. In 
 The mechanism by which a user's language selection is saved for future visits. Common persistence drivers write to cookies, session stores, or `localStorage`.
 
 ### Revalidation
-React Router's process of re-executing all active loaders (including the root layout loader) to refresh page state after an action form submits. In Context mode, custom revalidation rules are necessary to force new dictionary fetching when the language changes but the URL remains static.
+React Router's process of re-executing active loaders (including the root layout loader) to refresh page state after navigations or action submissions. In React Router v8, call sites can opt out with `defaultShouldRevalidate={false}`; `lingui-rr`'s `createLinguiShouldRevalidate` is only an optional guardrail for locale-switch submissions.
 
 ### Serialization
 The process of translating JavaScript runtime data structures into a string format (JSON) suitable for network transit. React Router requires loader data to be JSON-serializable. Because compiled Lingui catalogs contain runtime structures, `lingui-rr` provides safe loader wrappers that serialize cleanly without needing unsafe code-casting assertions.

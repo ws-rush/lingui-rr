@@ -62,7 +62,6 @@ In `app/root.tsx`, export the server middleware and loader. The middleware handl
 import {
   createLinguiMiddleware, // [!code focus]
   createLinguiRootLoader, // [!code focus]
-  createLinguiShouldRevalidate, // [!code focus]
   LinguiRouterProvider, // [!code focus]
 } from 'lingui-rr'
 import {
@@ -79,7 +78,6 @@ import { defaultLocale, i18n } from './lib/i18n'
 // Export server middleware & loader
 export const middleware = [createLinguiMiddleware(i18n)] // [!code focus]
 export const loader = createLinguiRootLoader(i18n) // [!code focus]
-export const shouldRevalidate = createLinguiShouldRevalidate(i18n) // [!code focus]
 
 export function Layout({ children }: { readonly children: React.ReactNode }) {
   const lingui = useRouteLoaderData<typeof loader>('root') // [!code focus]

@@ -1866,14 +1866,26 @@ describe('createLinguiShouldRevalidate', () => {
     ).toBe(true)
   })
 
-  it('revalidates when the pathname changes during navigation', () => {
+  it('defers to React Router defaults for pathname-changing navigation', () => {
     expect(
       shouldRevalidate({
         ...baseArgs,
+        defaultShouldRevalidate: true,
         currentUrl: new URL('https://example.com/ar/about'),
         nextUrl: new URL('https://example.com/ar/contact'),
       }),
     ).toBe(true)
+  })
+
+  it('honors call-site revalidation opt-out for pathname-changing navigation', () => {
+    expect(
+      shouldRevalidate({
+        ...baseArgs,
+        defaultShouldRevalidate: false,
+        currentUrl: new URL('https://example.com/ar/about'),
+        nextUrl: new URL('https://example.com/ar/contact'),
+      }),
+    ).toBe(false)
   })
 
   it('matches the action path even when the submission posts to the full URL', () => {
@@ -1889,26 +1901,53 @@ describe('createLinguiShouldRevalidate', () => {
     ).toBe(true)
   })
 
-  it('does not revalidate for a search-param-only navigation', () => {
+  it('defers to React Router defaults for search-param-only navigation', () => {
+    const currentUrl = new URL('https://example.com/ar/blog?page=1')
+    const nextUrl = new URL('https://example.com/ar/blog?page=2')
+
     expect(
       shouldRevalidate({
         ...baseArgs,
-        currentUrl: new URL('https://example.com/ar/blog?page=1'),
-        nextUrl: new URL('https://example.com/ar/blog?page=2'),
+        defaultShouldRevalidate: false,
+        currentUrl,
+        nextUrl,
       }),
     ).toBe(false)
-  })
 
-  it('does not revalidate for an unrelated form action on the same path', () => {
     expect(
       shouldRevalidate({
         ...baseArgs,
-        currentUrl: new URL('https://example.com/ar/contact'),
-        nextUrl: new URL('https://example.com/ar/contact'),
+        defaultShouldRevalidate: true,
+        currentUrl,
+        nextUrl,
+      }),
+    ).toBe(true)
+  })
+
+  it('defers to React Router defaults for unrelated form actions', () => {
+    const currentUrl = new URL('https://example.com/ar/contact')
+
+    expect(
+      shouldRevalidate({
+        ...baseArgs,
+        defaultShouldRevalidate: false,
+        currentUrl,
+        nextUrl: currentUrl,
         formAction: '/contact',
         formMethod: 'POST',
       }),
     ).toBe(false)
+
+    expect(
+      shouldRevalidate({
+        ...baseArgs,
+        defaultShouldRevalidate: true,
+        currentUrl,
+        nextUrl: currentUrl,
+        formAction: '/contact',
+        formMethod: 'POST',
+      }),
+    ).toBe(true)
   })
 
   it('revalidates when the formAction is prefixed with a supported locale', () => {

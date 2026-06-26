@@ -43,7 +43,7 @@ function createLinguiRootLoader(router: LinguiRouterInstance): LoaderFunction
 
 ---
 
-## Actions & Revalidation
+## Actions & Optional Revalidation
 
 ### `createLocaleAction`
 Creates an action route handler to process locale updates.
@@ -57,7 +57,7 @@ function createLocaleAction(router: LinguiRouterInstance): ActionFunction
 * **Returns**: A response directing the browser to the redirected path with updated cookie/session headers.
 
 ### `createLinguiShouldRevalidate`
-Creates a custom revalidation strategy for React Router.
+Creates an optional React Router `shouldRevalidate` guardrail for locale-switch submissions.
 
 ```ts
 function createLinguiShouldRevalidate(
@@ -67,7 +67,7 @@ function createLinguiShouldRevalidate(
 ```
 * **Options**:
   * `actionPath`: The route path of your locale action (defaults to `"/change-locale"`).
-* **Behavior**: Returns `true` (triggering revalidation) when a POST request is sent to `actionPath` or when the URL pathname changes. Prevents unnecessary dictionary re-fetching on simple query-parameter changes.
+* **Behavior**: Most React Router v8 apps do not need to export this helper because action submissions revalidate by default. If you do export it, it returns `true` when a submission is sent to `actionPath`, even if that submission redirects back to the same URL. All other navigations and submissions defer to React Router's `defaultShouldRevalidate`, so v8 call-site controls like `<Form defaultShouldRevalidate={false}>`, `<Link defaultShouldRevalidate={false}>`, `useSubmit(...)`, and `fetcher.submit(...)` continue to work.
 
 ---
 

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { assertArabic, assertEnglish, switchTo } from '../_helpers'
 
-// SSR + context. The locale lives in a cookie; URLs never change. The
-// shouldRevalidate rule is what refreshes the root loader after a switch
-// (the action redirects back to the same path).
+// SSR + context. The locale lives in a cookie; URLs never change. React Router
+// revalidates after the locale action, while createLinguiShouldRevalidate acts
+// as an additional guardrail for the root loader.
 test.describe('ssr-context', () => {
   test('serves the default locale at "/" with no URL prefix', async ({ page }) => {
     await page.goto('/')
