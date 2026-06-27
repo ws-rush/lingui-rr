@@ -4,7 +4,9 @@ import { assertArabic, assertEnglish, switchTo } from '../_helpers'
 // SSR + url-prefix (prefixDefaultLocale: true). The server middleware redirects
 // unprefixed URLs to the detected/default locale prefix, so `/` -> `/en`.
 test.describe('ssr-url-prefix', () => {
-  test('redirects unprefixed "/" to the default locale prefix "/en"', async ({ page }) => {
+  test('redirects unprefixed "/" to the default locale prefix "/en"', async ({
+    page,
+  }) => {
     await page.goto('/')
     await expect(page).toHaveURL(/\/en\/?$/)
     await assertEnglish(page)
@@ -16,7 +18,9 @@ test.describe('ssr-url-prefix', () => {
     await assertArabic(page)
   })
 
-  test('switching locale rewrites the URL prefix and persists across reload', async ({ page }) => {
+  test('switching locale rewrites the URL prefix and persists across reload', async ({
+    page,
+  }) => {
     await page.goto('/en')
     await assertEnglish(page)
 
@@ -37,13 +41,17 @@ test.describe('ssr-url-prefix', () => {
     await assertArabic(page)
   })
 
-  test('redirects unsupported locale-like prefixes to detected/default locale', async ({ page }) => {
+  test('redirects unsupported locale-like prefixes to detected/default locale', async ({
+    page,
+  }) => {
     await page.goto('/fr')
     await expect(page).toHaveURL(/\/en\/?$/)
     await assertEnglish(page)
   })
 
-  test('handles regional locale fallback by redirecting to base supported locale', async ({ page }) => {
+  test('handles regional locale fallback by redirecting to base supported locale', async ({
+    page,
+  }) => {
     await page.goto('/en-US')
     await expect(page).toHaveURL(/\/en\/?$/)
     await assertEnglish(page)

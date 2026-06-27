@@ -35,14 +35,17 @@ export async function assertArabic(page: Page) {
 export async function assertHtmlAttrs(page: Page, lang: string, dir: string) {
   const htmlLang = await page.locator('html').getAttribute('lang')
   const htmlDir = await page.locator('html').getAttribute('dir')
-  if (htmlLang !== lang) throw new Error(`expected <html lang="${lang}">, got "${htmlLang}"`)
-  if (htmlDir !== dir) throw new Error(`expected <html dir="${dir}">, got "${htmlDir}"`)
+  if (htmlLang !== lang)
+    throw new Error(`expected <html lang="${lang}">, got "${htmlLang}"`)
+  if (htmlDir !== dir)
+    throw new Error(`expected <html dir="${dir}">, got "${htmlDir}"`)
 }
 
 export async function assertMarkers(page: Page, locale: string, dir: string) {
   const loc = await localeText(page).textContent()
   const d = await dirText(page).textContent()
-  if (loc !== locale) throw new Error(`expected locale marker "${locale}", got "${loc}"`)
+  if (loc !== locale)
+    throw new Error(`expected locale marker "${locale}", got "${loc}"`)
   if (d !== dir) throw new Error(`expected dir marker "${dir}", got "${d}"`)
 }
 

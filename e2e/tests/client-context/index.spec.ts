@@ -5,8 +5,12 @@ import { assertArabic, assertEnglish, switchTo } from '../_helpers'
 // no URL prefix. The locale survives reloads via localStorage.
 test.describe('client-context', () => {
   test.beforeEach(async ({ page }) => {
-    page.on('console', msg => console.log('BROWSER CONSOLE (client-context):', msg.text()))
-    page.on('pageerror', err => console.error('BROWSER ERROR (client-context):', err))
+    page.on('console', (msg) =>
+      console.log('BROWSER CONSOLE (client-context):', msg.text()),
+    )
+    page.on('pageerror', (err) =>
+      console.error('BROWSER ERROR (client-context):', err),
+    )
   })
 
   test('serves the navigator/default locale at "/"', async ({ page }) => {
@@ -16,7 +20,9 @@ test.describe('client-context', () => {
     await assertEnglish(page)
   })
 
-  test('switching locale keeps the path and persists via localStorage across reload', async ({ page }) => {
+  test('switching locale keeps the path and persists via localStorage across reload', async ({
+    page,
+  }) => {
     await page.goto('/')
     await assertEnglish(page)
 
@@ -30,7 +36,9 @@ test.describe('client-context', () => {
     await assertArabic(page)
   })
 
-  test('a returning visit with localStorage set uses the persisted locale', async ({ page }) => {
+  test('a returning visit with localStorage set uses the persisted locale', async ({
+    page,
+  }) => {
     await page.goto('/')
     await page.evaluate(() => localStorage.setItem('locale', 'ar'))
     await page.reload()

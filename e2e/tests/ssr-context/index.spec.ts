@@ -5,13 +5,17 @@ import { assertArabic, assertEnglish, switchTo } from '../_helpers'
 // revalidates after the locale action, while createLinguiShouldRevalidate acts
 // as an additional guardrail for the root loader.
 test.describe('ssr-context', () => {
-  test('serves the default locale at "/" with no URL prefix', async ({ page }) => {
+  test('serves the default locale at "/" with no URL prefix', async ({
+    page,
+  }) => {
     await page.goto('/')
     await expect(page).toHaveURL(/\/$/)
     await assertEnglish(page)
   })
 
-  test('switching locale keeps the same path and persists across reload', async ({ page }) => {
+  test('switching locale keeps the same path and persists across reload', async ({
+    page,
+  }) => {
     await page.goto('/')
     await assertEnglish(page)
 
@@ -26,9 +30,14 @@ test.describe('ssr-context', () => {
     await assertArabic(page)
   })
 
-  test('a returning visit with a cookie uses the persisted locale', async ({ context, page }) => {
+  test('a returning visit with a cookie uses the persisted locale', async ({
+    context,
+    page,
+  }) => {
     // Seed the locale cookie directly and confirm the server honors it.
-    await context.addCookies([{ name: 'locale', value: 'ar', url: 'http://127.0.0.1:3102' }])
+    await context.addCookies([
+      { name: 'locale', value: 'ar', url: 'http://127.0.0.1:3102' },
+    ])
     await page.goto('/')
     await assertArabic(page)
   })

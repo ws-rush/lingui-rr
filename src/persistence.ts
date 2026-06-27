@@ -1,4 +1,8 @@
-import type { CookieSerializeOptions, SessionData, SessionStorage } from 'react-router'
+import type {
+  CookieSerializeOptions,
+  SessionData,
+  SessionStorage,
+} from 'react-router'
 import type { Persistence, CookieOptions } from './types'
 import { parseCookie, serializeCookie } from './utils'
 
@@ -10,14 +14,22 @@ export const serverPersistence = {
    * secure: true, domain: '.example.com' })`.
    */
   cookie(name = 'locale', options: CookieOptions = {}): Persistence<'server'> {
-    const resolved: CookieOptions = { sameSite: 'Lax', httpOnly: true, ...options }
+    const resolved: CookieOptions = {
+      sameSite: 'Lax',
+      httpOnly: true,
+      ...options,
+    }
     return {
       kind: 'server',
       read: ({ request }) => parseCookie(request.headers.get('Cookie'), name),
-      write: async (_ctx, locale) => ({ 'Set-Cookie': serializeCookie(name, locale, resolved) }),
+      write: async (_ctx, locale) => ({
+        'Set-Cookie': serializeCookie(name, locale, resolved),
+      }),
     }
   },
-  custom(persistence: Omit<Persistence<'server'>, 'kind'>): Persistence<'server'> {
+  custom(
+    persistence: Omit<Persistence<'server'>, 'kind'>,
+  ): Persistence<'server'> {
     return { kind: 'server', ...persistence }
   },
   /**
@@ -59,7 +71,9 @@ export const serverPersistence = {
       write: async ({ request }, locale) => {
         const session = await getSession(request.headers.get('Cookie'))
         session.set(key as never, locale as never)
-        return { 'Set-Cookie': await commitSession(session, options.commitOptions) }
+        return {
+          'Set-Cookie': await commitSession(session, options.commitOptions),
+        }
       },
     }
   },
@@ -78,7 +92,8 @@ export const clientPersistence = {
     return {
       kind: 'client',
       read: ({ request }) => {
-        if (typeof document !== 'undefined') return parseCookie(document.cookie, name)
+        if (typeof document !== 'undefined')
+          return parseCookie(document.cookie, name)
         return parseCookie(request?.headers.get('Cookie') ?? null, name)
       },
       write: async (_ctx, locale) => {
@@ -94,13 +109,17 @@ export const clientPersistence = {
   localStorage(key = 'locale'): Persistence<'client'> {
     return {
       kind: 'client',
-      read: () => (typeof localStorage === 'undefined' ? null : localStorage.getItem(key)),
+      read: () =>
+        typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
       write: async (_ctx, locale) => {
-        if (typeof localStorage !== 'undefined') localStorage.setItem(key, locale)
+        if (typeof localStorage !== 'undefined')
+          localStorage.setItem(key, locale)
       },
     }
   },
-  custom(persistence: Omit<Persistence<'client'>, 'kind'>): Persistence<'client'> {
+  custom(
+    persistence: Omit<Persistence<'client'>, 'kind'>,
+  ): Persistence<'client'> {
     return { kind: 'client', ...persistence }
   },
 }

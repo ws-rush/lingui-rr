@@ -1,4 +1,8 @@
-import type { Detector, ServerDetectorContext, ClientDetectorContext } from './types'
+import type {
+  Detector,
+  ServerDetectorContext,
+  ClientDetectorContext,
+} from './types'
 import { matchSupportedLocale, parseCookie, parseAcceptLanguage } from './utils'
 
 export async function runDetectors(
@@ -18,10 +22,17 @@ export async function runDetectors(
 
 export const serverDetectors = {
   cookie(name = 'locale'): Detector<'server'> {
-    return { kind: 'server', detect: ({ request }) => parseCookie(request.headers.get('Cookie'), name) }
+    return {
+      kind: 'server',
+      detect: ({ request }) => parseCookie(request.headers.get('Cookie'), name),
+    }
   },
   acceptLanguage(): Detector<'server'> {
-    return { kind: 'server', detect: ({ request }) => parseAcceptLanguage(request.headers.get('Accept-Language')) }
+    return {
+      kind: 'server',
+      detect: ({ request }) =>
+        parseAcceptLanguage(request.headers.get('Accept-Language')),
+    }
   },
   custom(detector: Omit<Detector<'server'>, 'kind'>): Detector<'server'> {
     return { kind: 'server', ...detector }
@@ -33,16 +44,25 @@ export const clientDetectors = {
     return {
       kind: 'client',
       detect: ({ request }) => {
-        if (typeof document !== 'undefined') return parseCookie(document.cookie, name)
+        if (typeof document !== 'undefined')
+          return parseCookie(document.cookie, name)
         return parseCookie(request?.headers.get('Cookie') ?? null, name)
       },
     }
   },
   localStorage(key = 'locale'): Detector<'client'> {
-    return { kind: 'client', detect: () => (typeof localStorage === 'undefined' ? null : localStorage.getItem(key)) }
+    return {
+      kind: 'client',
+      detect: () =>
+        typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
+    }
   },
   navigator(): Detector<'client'> {
-    return { kind: 'client', detect: () => (typeof navigator === 'undefined' ? null : navigator.language) }
+    return {
+      kind: 'client',
+      detect: () =>
+        typeof navigator === 'undefined' ? null : navigator.language,
+    }
   },
   custom(detector: Omit<Detector<'client'>, 'kind'>): Detector<'client'> {
     return { kind: 'client', ...detector }
