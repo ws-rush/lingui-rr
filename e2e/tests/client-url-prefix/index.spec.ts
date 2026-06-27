@@ -6,8 +6,12 @@ import { assertArabic, assertEnglish, switchTo } from '../_helpers'
 // middleware runs in the browser.
 test.describe('client-url-prefix', () => {
   test.beforeEach(async ({ page }) => {
-    page.on('console', msg => console.log('BROWSER CONSOLE (client-url-prefix):', msg.text()))
-    page.on('pageerror', err => console.error('BROWSER ERROR (client-url-prefix):', err))
+    page.on('console', (msg) =>
+      console.log('BROWSER CONSOLE (client-url-prefix):', msg.text()),
+    )
+    page.on('pageerror', (err) =>
+      console.error('BROWSER ERROR (client-url-prefix):', err),
+    )
   })
 
   test('serves the hidden default locale at "/"', async ({ page }) => {
@@ -22,7 +26,9 @@ test.describe('client-url-prefix', () => {
     await assertArabic(page)
   })
 
-  test('switching locale rewrites the prefix and persists across reload', async ({ page }) => {
+  test('switching locale rewrites the prefix and persists across reload', async ({
+    page,
+  }) => {
     await page.goto('/')
     await assertEnglish(page)
 
@@ -36,21 +42,30 @@ test.describe('client-url-prefix', () => {
     await assertArabic(page)
   })
 
-  test('redirects to clean URL when default locale is explicitly prefixed', async ({ page }) => {
+  test('redirects to clean URL when default locale is explicitly prefixed', async ({
+    page,
+  }) => {
     await page.goto('/en')
     await expect(page).toHaveURL(/\/$/)
     await assertEnglish(page)
   })
 
-  test('a returning visit with a client cookie redirects to the persisted locale', async ({ context, page }) => {
+  test('a returning visit with a client cookie redirects to the persisted locale', async ({
+    context,
+    page,
+  }) => {
     // Seed the client cookie directly.
-    await context.addCookies([{ name: 'locale', value: 'ar', url: 'http://127.0.0.1:3103' }])
+    await context.addCookies([
+      { name: 'locale', value: 'ar', url: 'http://127.0.0.1:3103' },
+    ])
     await page.goto('/')
     await expect(page).toHaveURL(/\/ar\/?$/)
     await assertArabic(page)
   })
 
-  test('handles regional locale fallback by redirecting to base supported locale', async ({ page }) => {
+  test('handles regional locale fallback by redirecting to base supported locale', async ({
+    page,
+  }) => {
     await page.goto('/ar-EG')
     await expect(page).toHaveURL(/\/ar\/?$/)
     await assertArabic(page)

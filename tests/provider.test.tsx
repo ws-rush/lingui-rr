@@ -27,7 +27,8 @@ describe('LinguiRouterProvider and hooks', () => {
       const lingui = useLinguiRouter()
       return (
         <output>
-          {lingui.locale}|{lingui.localeMeta.label}|{lingui.localeMeta.dir}|{lingui.locales.length}|{lingui.htmlAttrs.lang}
+          {lingui.locale}|{lingui.localeMeta.label}|{lingui.localeMeta.dir}|
+          {lingui.locales.length}|{lingui.htmlAttrs.lang}
         </output>
       )
     }
@@ -53,7 +54,10 @@ describe('LinguiRouterProvider and hooks', () => {
 
 describe('locale metadata helpers', () => {
   it('returns html attrs, labels, and direction without mutating document', () => {
-    expect(getHtmlAttrs('ar', state.locales)).toEqual({ lang: 'ar', dir: 'rtl' })
+    expect(getHtmlAttrs('ar', state.locales)).toEqual({
+      lang: 'ar',
+      dir: 'rtl',
+    })
     expect(getLocaleDir('ar', state.locales)).toBe('rtl')
     expect(getLocaleLabel('ar', state.locales)).toBe('العربية')
   })
@@ -69,7 +73,7 @@ describe('provider wires real Lingui catalogs for translation', () => {
     messages,
   }
 
-  it('renders a message translated through the provider\'s i18n instance', () => {
+  it("renders a message translated through the provider's i18n instance", () => {
     function Probe() {
       const { _ } = useLingui()
       return (

@@ -12,17 +12,26 @@ import { defineConfig, devices } from '@playwright/test'
 // execute exactly as they would in a user app.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const CI = !!process.env.CI
+const CI = Boolean(process.env.CI)
 // Resolve the react-router CLI from this package's node_modules so the webServer
 // can launch it with cwd = the fixture dir.
-const reactRouterBin = path.join(__dirname, 'node_modules', '.bin', 'react-router')
+const reactRouterBin = path.join(
+  __dirname,
+  'node_modules',
+  '.bin',
+  'react-router',
+)
 
 type Project = { name: string; port: number; testDir: string }
 
 const projects: Project[] = [
   { name: 'ssr-url-prefix', port: 3101, testDir: './tests/ssr-url-prefix' },
   { name: 'ssr-context', port: 3102, testDir: './tests/ssr-context' },
-  { name: 'client-url-prefix', port: 3103, testDir: './tests/client-url-prefix' },
+  {
+    name: 'client-url-prefix',
+    port: 3103,
+    testDir: './tests/client-url-prefix',
+  },
   { name: 'client-context', port: 3104, testDir: './tests/client-context' },
 ]
 

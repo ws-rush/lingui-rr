@@ -1,9 +1,5 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
-import {
-  clientDetectors,
-  clientPersistence,
-  runDetectors,
-} from '../src/index'
+import { clientDetectors, clientPersistence, runDetectors } from '../src/index'
 
 // These tests exercise the *browser* code paths of the client detectors and
 // persistence adapters. In Node (the default vitest environment) the browser
@@ -14,7 +10,8 @@ import {
 
 function createLocalStorageStub(store: Record<string, string>) {
   return {
-    getItem: (key: string) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key]! : null),
+    getItem: (key: string) =>
+      Object.prototype.hasOwnProperty.call(store, key) ? store[key]! : null,
     setItem: (key: string, value: string) => {
       store[key] = String(value)
     },

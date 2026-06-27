@@ -8,11 +8,15 @@ vi.mock('@lingui/core', async (importOriginal) => {
     setupI18n: (...args: any[]) => {
       setupI18nCalls.push(args)
       return original.setupI18n(...args)
-    }
+    },
   }
 })
 
-import { loadLinguiState, createLinguiRouter, matchSupportedLocale } from '../src/index'
+import {
+  loadLinguiState,
+  createLinguiRouter,
+  matchSupportedLocale,
+} from '../src/index'
 
 describe('loadLinguiState performance', () => {
   it('does not call setupI18n inside loadLinguiState', async () => {
@@ -36,7 +40,9 @@ describe('matchSupportedLocale performance and correctness', () => {
     expect(matchSupportedLocale('en-US', ['en', 'ar'], 'ar')).toBe('en')
     expect(matchSupportedLocale('ar-EG', ['en', 'ar'], 'en')).toBe('ar')
     expect(matchSupportedLocale('fr-FR', ['en', 'ar'], 'en')).toBe('en')
-    expect(matchSupportedLocale('zh-Hant-TW', ['zh-Hant', 'en'], 'en')).toBe('zh-Hant')
+    expect(matchSupportedLocale('zh-Hant-TW', ['zh-Hant', 'en'], 'en')).toBe(
+      'zh-Hant',
+    )
     expect(matchSupportedLocale(null, ['en'], 'en')).toBe('en')
   })
 })

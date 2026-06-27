@@ -1,25 +1,53 @@
 import type { Messages } from '@lingui/core'
 import { redirect } from 'react-router'
-import type { LinguiRouter, LinguiState, LinguiRootLoaderData, LocaleMeta, LocaleDirection, CatalogModule, CatalogLoader } from './types'
-import { matchSupportedLocale, normalizeLocaleCode, appendHeaders, safeRedirectPath } from './utils'
+import type {
+  LinguiRouter,
+  LinguiState,
+  LinguiRootLoaderData,
+  LocaleMeta,
+  LocaleDirection,
+  CatalogModule,
+  CatalogLoader,
+} from './types'
+import {
+  matchSupportedLocale,
+  normalizeLocaleCode,
+  appendHeaders,
+  safeRedirectPath,
+} from './utils'
 import { rewriteLocalePath } from './path'
 
-async function readActionPayload(request: Request): Promise<{ locale: string | null; redirectTo: string }> {
+async function readActionPayload(
+  request: Request,
+): Promise<{ locale: string | null; redirectTo: string }> {
   const contentType = request.headers.get('Content-Type') ?? ''
   if (contentType.includes('application/json')) {
-    const body = (await request.json()) as { locale?: unknown; redirectTo?: unknown }
-    return { locale: typeof body.locale === 'string' ? body.locale : null, redirectTo: typeof body.redirectTo === 'string' ? body.redirectTo : '/' }
+    const body = (await request.json()) as {
+      locale?: unknown
+      redirectTo?: unknown
+    }
+    return {
+      locale: typeof body.locale === 'string' ? body.locale : null,
+      redirectTo: typeof body.redirectTo === 'string' ? body.redirectTo : '/',
+    }
   }
   const formData = await request.formData()
   const locale = formData.get('locale')
   const redirectTo = formData.get('redirectTo')
-  return { locale: typeof locale === 'string' ? locale : null, redirectTo: typeof redirectTo === 'string' ? redirectTo : '/' }
+  return {
+    locale: typeof locale === 'string' ? locale : null,
+    redirectTo: typeof redirectTo === 'string' ? redirectTo : '/',
+  }
 }
 
 export function createLocaleAction(router: LinguiRouter) {
   return async ({ request }: { request: Request }): Promise<Response> => {
     const { locale: rawLocale, redirectTo } = await readActionPayload(request)
-    const locale = matchSupportedLocale(rawLocale, router.localeCodes, router.fallbackLocale)
+    const locale = matchSupportedLocale(
+      rawLocale,
+      router.localeCodes,
+      router.fallbackLocale,
+    )
     const headers = new Headers()
 
     for (const persistence of router.config.persistence ?? []) {
@@ -40,11 +68,27 @@ export function createLocaleAction(router: LinguiRouter) {
   }
 }
 
-export async function loadLinguiState(router: LinguiRouter, locale: string): Promise<LinguiState> {
-  const matchedLocale = matchSupportedLocale(locale, router.localeCodes, router.fallbackLocale)
-  const messages = await readCatalogMessages(router.config.catalogs[matchedLocale]!, matchedLocale)
+export async function loadLinguiState(
+  router: LinguiRouter,
+  locale: string,
+): Promise<LinguiState> {
+  const matchedLocale = matchSupportedLocale(
+    locale,
+    router.localeCodes,
+    router.fallbackLocale,
+  )
+  const messages = await readCatalogMessages(
+    router.config.catalogs[matchedLocale],
+    matchedLocale,
+  )
   const localeMeta = router.locales.find((item) => item.code === matchedLocale)!
-  return { locale: matchedLocale, localeMeta, locales: router.locales, messages, htmlAttrs: getHtmlAttrs(localeMeta) }
+  return {
+    locale: matchedLocale,
+    localeMeta,
+    locales: router.locales,
+    messages,
+    htmlAttrs: getHtmlAttrs(localeMeta),
+  }
 }
 
 /**
@@ -54,48 +98,85 @@ export async function loadLinguiState(router: LinguiRouter, locale: string): Pro
  * a bare messages record. Throws a locale-specific error naming the offending
  * locale when the loader rejects or the module has no usable messages.
  */
-async function readCatalogMessages(loader: CatalogLoader, locale: string): Promise<Messages> {
+async function readCatalogMessages(
+  loader: CatalogLoader,
+  locale: string,
+): Promise<Messages> {
+  const mod = await loadCatalogModule(loader, locale)
+  const messages = messagesFromCatalogModule(mod)
+
+  if (!isMessagesRecord(messages)) {
+    throw new Error(
+      `[lingui-rr] Catalog for locale "${locale}" did not contain usable messages. Expected a module with a "messages" export (e.g. { messages: { ... } }) or a raw messages record, got ${describeCatalogShape(mod)}.`,
+    )
+  }
+
+  return messages
+}
+
+async function loadCatalogModule(
+  loader: CatalogLoader,
+  locale: string,
+): Promise<CatalogModule> {
   let mod: CatalogModule
   try {
     mod = await loader()
   } catch (cause) {
-    throw new Error(`[lingui-rr] Failed to load catalog for locale "${locale}".`, { cause })
+    throw new Error(
+      `[lingui-rr] Failed to load catalog for locale "${locale}".`,
+      { cause },
+    )
   }
 
   if (mod == null || typeof mod !== 'object') {
-    throw new Error(`[lingui-rr] Catalog for locale "${locale}" resolved to ${describeCatalogShape(mod)}. Expected a module with a "messages" export (e.g. { messages: { ... } }) or a raw messages record.`)
+    throw new Error(
+      `[lingui-rr] Catalog for locale "${locale}" resolved to ${describeCatalogShape(mod)}. Expected a module with a "messages" export (e.g. { messages: { ... } }) or a raw messages record.`,
+    )
   }
 
-  let unwrapped = mod
-  if (
+  return mod
+}
+
+function messagesFromCatalogModule(mod: CatalogModule): unknown {
+  const unwrapped = unwrapDefaultCatalogModule(mod)
+
+  if (!('messages' in unwrapped)) return unwrapped
+
+  const messages = unwrapped.messages
+  if (messages === null || messages === undefined) return messages
+  return isPlainMessagesObject(messages) ? messages : unwrapped
+}
+
+function unwrapDefaultCatalogModule(mod: CatalogModule): CatalogModule {
+  if (!hasObjectDefaultExport(mod) || hasUsableMessagesExport(mod)) return mod
+  return mod.default
+}
+
+function hasObjectDefaultExport(
+  mod: CatalogModule,
+): mod is CatalogModule & { default: CatalogModule } {
+  return (
     'default' in mod &&
     mod.default != null &&
     typeof mod.default === 'object' &&
     !Array.isArray(mod.default)
-  ) {
-    const outerHasValidMessages = 'messages' in mod && mod.messages != null && typeof mod.messages === 'object' && !Array.isArray(mod.messages)
-    if (!outerHasValidMessages) {
-      unwrapped = mod.default as CatalogModule
-    }
-  }
+  )
+}
 
-  let messages: unknown
-  if ('messages' in unwrapped) {
-    const val = unwrapped.messages
-    if (val === null || val === undefined || (typeof val === 'object' && !Array.isArray(val))) {
-      messages = val
-    } else {
-      messages = unwrapped
-    }
-  } else {
-    messages = unwrapped
-  }
+function hasUsableMessagesExport(mod: CatalogModule): boolean {
+  return (
+    'messages' in mod &&
+    mod.messages != null &&
+    isPlainMessagesObject(mod.messages)
+  )
+}
 
-  if (messages == null || typeof messages !== 'object' || Array.isArray(messages)) {
-    throw new Error(`[lingui-rr] Catalog for locale "${locale}" did not contain usable messages. Expected a module with a "messages" export (e.g. { messages: { ... } }) or a raw messages record, got ${describeCatalogShape(mod)}.`)
-  }
+function isPlainMessagesObject(value: unknown): value is Messages {
+  return typeof value === 'object' && !Array.isArray(value)
+}
 
-  return messages as Messages
+function isMessagesRecord(value: unknown): value is Messages {
+  return value != null && isPlainMessagesObject(value)
 }
 
 function describeCatalogShape(value: unknown): string {
@@ -108,11 +189,13 @@ function describeCatalogShape(value: unknown): string {
   return `object with keys [${keys.slice(0, 5).join(', ')}${keys.length > 5 ? ', ...' : ''}]`
 }
 
-export function toSerializableLocaleMeta(locale: LocaleMeta): LocaleMeta {
+function toSerializableLocaleMeta(locale: LocaleMeta): LocaleMeta {
   return { code: locale.code, label: locale.label, dir: locale.dir }
 }
 
-export function toLinguiRootLoaderData(state: LinguiState): LinguiRootLoaderData {
+export function toLinguiRootLoaderData(
+  state: LinguiState,
+): LinguiRootLoaderData {
   return {
     locale: state.locale,
     localeMeta: toSerializableLocaleMeta(state.localeMeta),
@@ -122,16 +205,35 @@ export function toLinguiRootLoaderData(state: LinguiState): LinguiRootLoaderData
   }
 }
 
-export function getHtmlAttrs(locale: string | LocaleMeta, locales?: readonly LocaleMeta[]): { lang: string; dir: LocaleDirection } {
-  const meta = typeof locale === 'string' ? locales?.find((item) => item.code === normalizeLocaleCode(locale)) : locale
-  return { lang: typeof locale === 'string' ? normalizeLocaleCode(locale) : locale.code, dir: meta?.dir ?? 'ltr' }
+export function getHtmlAttrs(
+  locale: string | LocaleMeta,
+  locales?: readonly LocaleMeta[],
+): { lang: string; dir: LocaleDirection } {
+  const meta =
+    typeof locale === 'string'
+      ? locales?.find((item) => item.code === normalizeLocaleCode(locale))
+      : locale
+  return {
+    lang:
+      typeof locale === 'string' ? normalizeLocaleCode(locale) : locale.code,
+    dir: meta?.dir ?? 'ltr',
+  }
 }
 
-export function getLocaleDir(locale: string | LocaleMeta, locales?: readonly LocaleMeta[]): LocaleDirection {
+export function getLocaleDir(
+  locale: string | LocaleMeta,
+  locales?: readonly LocaleMeta[],
+): LocaleDirection {
   return getHtmlAttrs(locale, locales).dir
 }
 
-export function getLocaleLabel(locale: string | LocaleMeta, locales?: readonly LocaleMeta[]): string {
+export function getLocaleLabel(
+  locale: string | LocaleMeta,
+  locales?: readonly LocaleMeta[],
+): string {
   if (typeof locale !== 'string') return locale.label
-  return locales?.find((item) => item.code === normalizeLocaleCode(locale))?.label ?? normalizeLocaleCode(locale)
+  return (
+    locales?.find((item) => item.code === normalizeLocaleCode(locale))?.label ??
+    normalizeLocaleCode(locale)
+  )
 }

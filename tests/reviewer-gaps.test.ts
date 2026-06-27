@@ -8,7 +8,7 @@ import {
   getLocaleLabel,
   serverPersistence,
   clientPersistence,
-  type LinguiRouterConfig
+  type LinguiRouterConfig,
 } from '../src/index'
 import { parseCookie, parseAcceptLanguage } from '../src/utils'
 import { RouterContextProvider } from 'react-router'
@@ -34,7 +34,10 @@ describe('Reviewer coverage gaps', () => {
           mode: 'context',
           locales: ['en', 'EN'],
           defaultLocale: 'en',
-          catalogs: { en: async () => ({ messages: {} }), EN: async () => ({ messages: {} }) },
+          catalogs: {
+            en: async () => ({ messages: {} }),
+            EN: async () => ({ messages: {} }),
+          },
         }),
       ).toThrow(/duplicate locale codes/)
     })
@@ -49,7 +52,9 @@ describe('Reviewer coverage gaps', () => {
           persistence: [clientPersistence.localStorage()],
           catalogs: { en: async () => ({ messages: {} }) },
         } as unknown as LinguiRouterConfig),
-      ).toThrow(/config\.persistence: server: true configs can only use server persistence/)
+      ).toThrow(
+        /config\.persistence: server: true configs can only use server persistence/,
+      )
     })
 
     it('throws when client config uses server persistence', () => {
@@ -62,7 +67,9 @@ describe('Reviewer coverage gaps', () => {
           persistence: [serverPersistence.cookie()],
           catalogs: { en: async () => ({ messages: {} }) },
         } as unknown as LinguiRouterConfig),
-      ).toThrow(/config\.persistence: server: false configs can only use client persistence/)
+      ).toThrow(
+        /config\.persistence: server: false configs can only use client persistence/,
+      )
     })
   })
 
@@ -80,7 +87,10 @@ describe('Reviewer coverage gaps', () => {
       })
 
       const state = await loadLinguiState(router, 'en')
-      expect(state.messages).toEqual({ messages: 'Message value', hello: 'Hello' })
+      expect(state.messages).toEqual({
+        messages: 'Message value',
+        hello: 'Hello',
+      })
     })
   })
 
@@ -108,7 +118,9 @@ describe('Reviewer coverage gaps', () => {
     })
 
     it('returns label when input is a LocaleMeta object', () => {
-      expect(getLocaleLabel({ code: 'ar', label: 'العربية', dir: 'rtl' })).toBe('العربية')
+      expect(getLocaleLabel({ code: 'ar', label: 'العربية', dir: 'rtl' })).toBe(
+        'العربية',
+      )
     })
   })
 

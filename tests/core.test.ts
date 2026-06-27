@@ -1,5 +1,14 @@
 import { setupI18n } from '@lingui/core'
-import { RouterContextProvider, type ClientActionFunctionArgs, type ClientLoaderFunctionArgs, type CookieSerializeOptions, type DataStrategyResult, type MiddlewareFunction, type RouterContextProvider as RRContextProvider, type SessionStorage } from 'react-router'
+import {
+  RouterContextProvider,
+  type ClientActionFunctionArgs,
+  type ClientLoaderFunctionArgs,
+  type CookieSerializeOptions,
+  type DataStrategyResult,
+  type MiddlewareFunction,
+  type RouterContextProvider as RRContextProvider,
+  type SessionStorage,
+} from 'react-router'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
   clientDetectors,
@@ -26,7 +35,6 @@ import {
   type LinguiState,
 } from '../src/index'
 import { parseCookie, safeRedirectPath } from '../src/utils'
-
 
 describe('locale normalization', () => {
   it('canonicalizes BCP-47-ish casing', () => {
@@ -99,7 +107,10 @@ describe('config validation', () => {
         locales: ['en', 'ar'],
         defaultLocale: 'en',
         fallbackLocale: 'xyz',
-        catalogs: { en: async () => ({ messages: {} }), ar: async () => ({ messages: {} }) },
+        catalogs: {
+          en: async () => ({ messages: {} }),
+          ar: async () => ({ messages: {} }),
+        },
       }),
     ).toThrow(/config\.fallbackLocale.*"xyz".*\[en, ar\]/)
 
@@ -169,13 +180,17 @@ describe('catalog shapes', () => {
       locales: ['en', 'ar'],
       defaultLocale: 'en',
       catalogs: {
-        en: async () => ({ messages: { greeting: ['Hello'], withArg: ['Hello, ', ['0'], '!'] } }),
+        en: async () => ({
+          messages: { greeting: ['Hello'], withArg: ['Hello, ', ['0'], '!'] },
+        }),
         ar: async () => ({ messages: {} }),
       },
     })
 
     const state = await loadLinguiState(i18n, 'en')
-    expect((state.messages as Record<string, unknown>).greeting).toEqual(['Hello'])
+    expect((state.messages as Record<string, unknown>).greeting).toEqual([
+      'Hello',
+    ])
   })
 
   it('loads a bare messages record (no messages wrapper)', async () => {
@@ -201,7 +216,8 @@ describe('catalog shapes', () => {
       locales: ['en', 'ar'],
       defaultLocale: 'en',
       catalogs: {
-        en: async () => ({ default: { messages: { hello: 'Hello ES' } } }) as any,
+        en: async () =>
+          ({ default: { messages: { hello: 'Hello ES' } } }) as any,
         ar: async () => ({ messages: {} }),
       },
     })
@@ -226,7 +242,6 @@ describe('catalog shapes', () => {
     expect(state.messages).toEqual({ hello: 'Hello ES Bare' })
   })
 
-
   it('accepts an empty messages catalog', async () => {
     const i18n = createLinguiRouter({
       server: true,
@@ -246,7 +261,9 @@ describe('catalog shapes', () => {
 
 describe('URL prefix rewrite', () => {
   it('strictly prefixes unprefixed app paths', () => {
-    expect(rewriteLocalePath('/about?x=1', 'ar', ['en', 'ar'])).toBe('/ar/about?x=1')
+    expect(rewriteLocalePath('/about?x=1', 'ar', ['en', 'ar'])).toBe(
+      '/ar/about?x=1',
+    )
   })
 
   it('replaces existing locale prefix', () => {
@@ -267,13 +284,15 @@ describe('URL prefix rewrite', () => {
   })
 
   it('does not rewrite ignored paths', () => {
-    expect(rewriteLocalePath('/api/users', 'ar', ['en', 'ar'])).toBe('/api/users')
+    expect(rewriteLocalePath('/api/users', 'ar', ['en', 'ar'])).toBe(
+      '/api/users',
+    )
   })
 
   it('preserves query string and hash when prefixing a path', () => {
-    expect(rewriteLocalePath('/about?a=1&b=2#section', 'ar', ['en', 'ar'])).toBe(
-      '/ar/about?a=1&b=2#section',
-    )
+    expect(
+      rewriteLocalePath('/about?a=1&b=2#section', 'ar', ['en', 'ar']),
+    ).toBe('/ar/about?a=1&b=2#section')
   })
 
   it('preserves query string and hash when removing the default prefix', () => {
@@ -294,10 +313,10 @@ describe('URL prefix rewrite', () => {
   it('canonicalizes a non-canonical locale prefix to the supported casing', () => {
     // The first segment is matched case-insensitively against supported locales;
     // when 'en' is supported, '/en-us/...' is rewritten onto the canonical 'en'.
-    expect(rewriteLocalePath('/en-us/about', 'en', ['en', 'ar'])).toBe('/en/about')
+    expect(rewriteLocalePath('/en-us/about', 'en', ['en', 'ar'])).toBe(
+      '/en/about',
+    )
   })
-
-
 
   it('keeps an unsupported locale-looking segment that is not locale-like', () => {
     // 'about' is not locale-like, so it is treated as a real path segment.
@@ -305,7 +324,9 @@ describe('URL prefix rewrite', () => {
   })
 
   it('keeps an unsupported locale-like segment if it is a normal path segment (e.g. app)', () => {
-    expect(rewriteLocalePath('/app/dashboard', 'ar', ['en', 'ar'])).toBe('/ar/app/dashboard')
+    expect(rewriteLocalePath('/app/dashboard', 'ar', ['en', 'ar'])).toBe(
+      '/ar/app/dashboard',
+    )
   })
 
   it('respects a custom ignorePaths list that replaces the defaults', () => {
@@ -326,8 +347,12 @@ describe('URL prefix rewrite', () => {
   it('treats global RegExp ignorePaths deterministically across repeated calls', () => {
     const ignorePaths = [/^\/api\//g]
 
-    expect(rewriteLocalePath('/api/users', 'ar', ['en', 'ar'], { ignorePaths })).toBe('/api/users')
-    expect(rewriteLocalePath('/api/users', 'ar', ['en', 'ar'], { ignorePaths })).toBe('/api/users')
+    expect(
+      rewriteLocalePath('/api/users', 'ar', ['en', 'ar'], { ignorePaths }),
+    ).toBe('/api/users')
+    expect(
+      rewriteLocalePath('/api/users', 'ar', ['en', 'ar'], { ignorePaths }),
+    ).toBe('/api/users')
   })
 })
 
@@ -409,7 +434,9 @@ describe('cookie serialization', () => {
     }
     // also accepts a strict subset / disables booleans
     const minimal: CookieOptions = { httpOnly: false }
-    expect(serializeCookie('locale', 'ar', opts)).toContain('Domain=example.com')
+    expect(serializeCookie('locale', 'ar', opts)).toContain(
+      'Domain=example.com',
+    )
     expect(serializeCookie('locale', 'ar', minimal)).toBe('locale=ar; Path=/')
   })
 
@@ -474,8 +501,13 @@ describe('cookie serialization', () => {
 
   it('serverPersistence.cookie applies SameSite=Lax; HttpOnly defaults', async () => {
     const persistence = serverPersistence.cookie('locale')
-    const headers = await persistence.write({ request: new Request('https://example.com') }, 'ar')
-    expect(headers).toEqual({ 'Set-Cookie': 'locale=ar; Path=/; SameSite=Lax; HttpOnly' })
+    const headers = await persistence.write(
+      { request: new Request('https://example.com') },
+      'ar',
+    )
+    expect(headers).toEqual({
+      'Set-Cookie': 'locale=ar; Path=/; SameSite=Lax; HttpOnly',
+    })
   })
 
   it('serverPersistence.cookie lets options override the defaults', async () => {
@@ -487,17 +519,24 @@ describe('cookie serialization', () => {
       domain: '.example.com',
       path: '/app',
     })
-    const headers = await persistence.write({ request: new Request('https://example.com') }, 'ar')
+    const headers = await persistence.write(
+      { request: new Request('https://example.com') },
+      'ar',
+    )
     // httpOnly: false disables the default; the rest are applied.
     expect(headers).toEqual({
-      'Set-Cookie': 'locale=ar; Path=/app; Max-Age=120; SameSite=Strict; Secure; Domain=.example.com',
+      'Set-Cookie':
+        'locale=ar; Path=/app; Max-Age=120; SameSite=Strict; Secure; Domain=.example.com',
     })
   })
 
   it('clientPersistence.cookie applies SameSite=Lax default (no httpOnly) during an SSR action', async () => {
     // No document global → server-side action branch returns Set-Cookie.
     const persistence = clientPersistence.cookie('locale')
-    const headers = await persistence.write({ request: new Request('https://example.com') }, 'en')
+    const headers = await persistence.write(
+      { request: new Request('https://example.com') },
+      'en',
+    )
     expect(headers).toEqual({ 'Set-Cookie': 'locale=en; Path=/; SameSite=Lax' })
   })
 
@@ -507,7 +546,10 @@ describe('cookie serialization', () => {
       secure: true,
       httpOnly: true,
     })
-    const headers = await persistence.write({ request: new Request('https://example.com') }, 'en')
+    const headers = await persistence.write(
+      { request: new Request('https://example.com') },
+      'en',
+    )
     expect(headers).toEqual({
       'Set-Cookie': 'locale=en; Path=/; SameSite=None; Secure; HttpOnly',
     })
@@ -518,7 +560,9 @@ describe('session persistence', () => {
   // Minimal in-memory SessionStorage stub mirroring React Router's
   // createCookieSessionStorage semantics: getSession reads from a cookie header,
   // commitSession returns a Set-Cookie value and persists to the jar.
-  function createSessionStorage(jar: { cookie: string }): Pick<SessionStorage, 'getSession' | 'commitSession'> {
+  function createSessionStorage(jar: {
+    cookie: string
+  }): Pick<SessionStorage, 'getSession' | 'commitSession'> {
     let data: Record<string, unknown> = {}
     let loaded = false
     return {
@@ -526,22 +570,34 @@ describe('session persistence', () => {
         if (!loaded && cookieHeader) {
           for (const part of cookieHeader.split(';')) {
             const [k, ...rest] = part.trim().split('=')
-            if (k === 'session' && rest.join('=')) data = JSON.parse(decodeURIComponent(rest.join('=')))
+            if (k === 'session' && rest.join('='))
+              data = JSON.parse(decodeURIComponent(rest.join('=')))
           }
         }
         loaded = true
         return {
           id: '',
-          get data() { return data },
+          get data() {
+            return data
+          },
           get: (key: string) => data[key],
-          set: (key: string, value: unknown) => { data[key] = value },
-          unset: (key: string) => { delete data[key] },
+          set: (key: string, value: unknown) => {
+            data[key] = value
+          },
+          unset: (key: string) => {
+            delete data[key]
+          },
           has: (key: string) => key in data,
-          flash: (key: string, value: unknown) => { data[key] = value },
+          flash: (key: string, value: unknown) => {
+            data[key] = value
+          },
         } as never
       },
       async commitSession(_session: unknown, options?: CookieSerializeOptions) {
-        const maxAge = options && 'maxAge' in options ? (options as { maxAge?: number }).maxAge : undefined
+        const maxAge =
+          options && 'maxAge' in options
+            ? (options as { maxAge?: number }).maxAge
+            : undefined
         const cookie = `session=${encodeURIComponent(JSON.stringify(data))}${maxAge ? `; Max-Age=${maxAge}` : ''}`
         jar.cookie = cookie
         return cookie
@@ -550,11 +606,15 @@ describe('session persistence', () => {
   }
 
   it('reads a locale previously committed to the session', async () => {
-    const jar = { cookie: `session=${encodeURIComponent(JSON.stringify({ locale: 'ar' }))}` }
+    const jar = {
+      cookie: `session=${encodeURIComponent(JSON.stringify({ locale: 'ar' }))}`,
+    }
     const storage = createSessionStorage(jar)
     const persistence = serverPersistence.session(storage)
 
-    const request = new Request('https://example.com', { headers: { Cookie: jar.cookie } })
+    const request = new Request('https://example.com', {
+      headers: { Cookie: jar.cookie },
+    })
     expect(await persistence.read?.({ request })).toBe('ar')
   })
 
@@ -562,7 +622,9 @@ describe('session persistence', () => {
     const storage = createSessionStorage({ cookie: '' })
     const persistence = serverPersistence.session(storage)
 
-    expect(await persistence.read?.({ request: new Request('https://example.com') })).toBeNull()
+    expect(
+      await persistence.read?.({ request: new Request('https://example.com') }),
+    ).toBeNull()
   })
 
   it('writes the locale and returns a Set-Cookie from commitSession', async () => {
@@ -570,9 +632,14 @@ describe('session persistence', () => {
     const storage = createSessionStorage(jar)
     const persistence = serverPersistence.session(storage)
 
-    const result = await persistence.write({ request: new Request('https://example.com') }, 'en')
+    const result = await persistence.write(
+      { request: new Request('https://example.com') },
+      'en',
+    )
 
-    expect(result).toEqual({ 'Set-Cookie': `session=${encodeURIComponent(JSON.stringify({ locale: 'en' }))}` })
+    expect(result).toEqual({
+      'Set-Cookie': `session=${encodeURIComponent(JSON.stringify({ locale: 'en' }))}`,
+    })
     expect(jar.cookie).toContain('locale')
   })
 
@@ -581,18 +648,28 @@ describe('session persistence', () => {
     const storage = createSessionStorage(jar)
     const persistence = serverPersistence.session(storage, { key: 'lang' })
 
-    await persistence.write({ request: new Request('https://example.com') }, 'ar')
+    await persistence.write(
+      { request: new Request('https://example.com') },
+      'ar',
+    )
 
-    const written = JSON.parse(decodeURIComponent(jar.cookie.replace(/^session=/, '')))
+    const written = JSON.parse(
+      decodeURIComponent(jar.cookie.replace(/^session=/, '')),
+    )
     expect(written).toEqual({ lang: 'ar' })
   })
 
   it('forwards commitOptions to commitSession', async () => {
     const jar = { cookie: '' }
     const storage = createSessionStorage(jar)
-    const persistence = serverPersistence.session(storage, { commitOptions: { maxAge: 900 } as never })
+    const persistence = serverPersistence.session(storage, {
+      commitOptions: { maxAge: 900 } as never,
+    })
 
-    const result = await persistence.write({ request: new Request('https://example.com') }, 'en')
+    const result = await persistence.write(
+      { request: new Request('https://example.com') },
+      'en',
+    )
 
     expect(result).toEqual({
       'Set-Cookie': `session=${encodeURIComponent(JSON.stringify({ locale: 'en' }))}; Max-Age=900`,
@@ -604,8 +681,15 @@ describe('session persistence', () => {
     const storage = createSessionStorage(jar)
     const persistence = serverPersistence.session(storage)
 
-    await persistence.write({ request: new Request('https://example.com') }, 'ar')
-    const read = await persistence.read?.({ request: new Request('https://example.com', { headers: { Cookie: jar.cookie } }) })
+    await persistence.write(
+      { request: new Request('https://example.com') },
+      'ar',
+    )
+    const read = await persistence.read?.({
+      request: new Request('https://example.com', {
+        headers: { Cookie: jar.cookie },
+      }),
+    })
     expect(read).toBe('ar')
   })
 })
@@ -628,7 +712,9 @@ describe('middleware and loader', () => {
 
     const response = await middleware(
       {
-        request: new Request('https://example.com/about', { headers: { 'Accept-Language': 'ar-EG' } }),
+        request: new Request('https://example.com/about', {
+          headers: { 'Accept-Language': 'ar-EG' },
+        }),
         url: new URL('https://example.com/about'),
         context: new RouterContextProvider(),
         params: {},
@@ -665,7 +751,9 @@ describe('middleware and loader', () => {
 
     const response = await middleware(
       {
-        request: new Request('https://example.com/', { headers: { 'Accept-Language': 'ar' } }),
+        request: new Request('https://example.com/', {
+          headers: { 'Accept-Language': 'ar' },
+        }),
         url: new URL('https://example.com/'),
         context,
         params: {},
@@ -715,7 +803,10 @@ describe('middleware and loader', () => {
     const i18n = createLinguiRouter({
       server: true,
       mode: 'context',
-      locales: { en: { label: 'English', dir: 'ltr' }, ar: { label: 'العربية', dir: 'rtl' } },
+      locales: {
+        en: { label: 'English', dir: 'ltr' },
+        ar: { label: 'العربية', dir: 'rtl' },
+      },
       defaultLocale: 'en',
       detection: [serverDetectors.cookie('locale')],
       catalogs: {
@@ -729,7 +820,9 @@ describe('middleware and loader', () => {
 
     await middleware(
       {
-        request: new Request('https://example.com/current', { headers: { Cookie: 'locale=ar' } }),
+        request: new Request('https://example.com/current', {
+          headers: { Cookie: 'locale=ar' },
+        }),
         url: new URL('https://example.com/current'),
         context,
         params: {},
@@ -740,15 +833,28 @@ describe('middleware and loader', () => {
 
     expect(context.get(linguiRouterContext)?.locale).toBe('ar')
     await expect(
-      loader({ request: new Request('https://example.com/current'), url: new URL('https://example.com/current'), context, params: {}, pattern: '*' }),
-    ).resolves.toMatchObject({ locale: 'ar', localeMeta: { label: 'العربية', dir: 'rtl' }, htmlAttrs: { lang: 'ar', dir: 'rtl' } })
+      loader({
+        request: new Request('https://example.com/current'),
+        url: new URL('https://example.com/current'),
+        context,
+        params: {},
+        pattern: '*',
+      }),
+    ).resolves.toMatchObject({
+      locale: 'ar',
+      localeMeta: { label: 'العربية', dir: 'rtl' },
+      htmlAttrs: { lang: 'ar', dir: 'rtl' },
+    })
   })
 
   it('root loader returns only the explicit serializable state boundary', async () => {
     const i18n = createLinguiRouter({
       server: true,
       mode: 'context',
-      locales: { en: { label: 'English', dir: 'ltr' }, ar: { label: 'العربية', dir: 'rtl' } },
+      locales: {
+        en: { label: 'English', dir: 'ltr' },
+        ar: { label: 'العربية', dir: 'rtl' },
+      },
       defaultLocale: 'en',
       catalogs: {
         en: async () => ({ messages: {} }),
@@ -806,7 +912,9 @@ describe('middleware and loader', () => {
 
     await middleware(
       {
-        request: new Request('https://example.com/current', { headers: { Cookie: 'locale=ar' } }),
+        request: new Request('https://example.com/current', {
+          headers: { Cookie: 'locale=ar' },
+        }),
         url: new URL('https://example.com/current'),
         context,
         params: {},
@@ -836,7 +944,9 @@ describe('middleware and loader', () => {
 
     const response = await middleware(
       {
-        request: new Request('https://example.com/about', { headers: { Cookie: 'locale=en' } }),
+        request: new Request('https://example.com/about', {
+          headers: { Cookie: 'locale=en' },
+        }),
         url: new URL('https://example.com/about'),
         context: new RouterContextProvider(),
         params: {},
@@ -871,7 +981,9 @@ describe('middleware and loader', () => {
 
     const response = await middleware(
       {
-        request: new Request('https://example.com/en/about', { headers: { Cookie: 'locale=ar' } }),
+        request: new Request('https://example.com/en/about', {
+          headers: { Cookie: 'locale=ar' },
+        }),
         url: new URL('https://example.com/en/about'),
         context,
         params: {},
@@ -1105,7 +1217,9 @@ describe('middleware and loader', () => {
 
     expect(calledNext).toBe(false)
     expect((response as Response).status).toBe(302)
-    expect((response as Response).headers.get('Location')).toBe('/en/about?page=3#section')
+    expect((response as Response).headers.get('Location')).toBe(
+      '/en/about?page=3#section',
+    )
   })
 
   it('url-prefix middleware serves the hidden default locale and preserves query/hash', async () => {
@@ -1183,7 +1297,9 @@ describe('middleware and loader', () => {
     // /assets is no longer in the custom ignorePaths, so the middleware redirects.
     expect(calledNext).toBe(false)
     expect((apiResponse as Response).status).toBe(302)
-    expect((apiResponse as Response).headers.get('Location')).toBe('/en/assets/users')
+    expect((apiResponse as Response).headers.get('Location')).toBe(
+      '/en/assets/users',
+    )
 
     calledNext = false
     const healthResponse = await middleware(
@@ -1212,15 +1328,21 @@ describe('middleware and loader', () => {
       locales: ['en', 'ar'],
       defaultLocale: 'en',
       catalogs: {
-        en: async () => { throw new Error('catalog network down') },
+        en: async () => {
+          throw new Error('catalog network down')
+        },
         ar: async () => ({ messages: {} }),
       },
     })
 
     // The loader error is wrapped with locale context; the original error is
     // preserved on `cause`.
-    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(/Failed to load catalog for locale "en"/)
-    await expect(loadLinguiState(i18n, 'en')).rejects.toMatchObject({ cause: { message: 'catalog network down' } })
+    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(
+      /Failed to load catalog for locale "en"/,
+    )
+    await expect(loadLinguiState(i18n, 'en')).rejects.toMatchObject({
+      cause: { message: 'catalog network down' },
+    })
   })
 
   it('throws a clear error when a catalog module has a null messages export', async () => {
@@ -1230,12 +1352,14 @@ describe('middleware and loader', () => {
       locales: ['en', 'ar'],
       defaultLocale: 'en',
       catalogs: {
-        en: async () => ({ messages: null } as never), // wrong shape
+        en: async () => ({ messages: null }) as never, // wrong shape
         ar: async () => ({ messages: {} }),
       },
     })
 
-    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(/Catalog for locale "en" did not contain usable messages/)
+    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(
+      /Catalog for locale "en" did not contain usable messages/,
+    )
   })
 
   it('throws a clear error when a catalog module resolves to null', async () => {
@@ -1250,7 +1374,9 @@ describe('middleware and loader', () => {
       },
     })
 
-    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(/Catalog for locale "en" resolved to null/)
+    await expect(loadLinguiState(i18n, 'en')).rejects.toThrow(
+      /Catalog for locale "en" resolved to null/,
+    )
   })
 
   it('propagates a catalog loader failure through the middleware', async () => {
@@ -1260,7 +1386,9 @@ describe('middleware and loader', () => {
       locales: ['en', 'ar'],
       defaultLocale: 'en',
       catalogs: {
-        en: async () => { throw new Error('boom') },
+        en: async () => {
+          throw new Error('boom')
+        },
         ar: async () => ({ messages: {} }),
       },
     })
@@ -1322,7 +1450,10 @@ describe('createLocaleAction', () => {
     const action = createLocaleAction(i18n)
     const request = new Request('https://example.com/change-locale', {
       method: 'POST',
-      body: new URLSearchParams({ locale: 'ar', redirectTo: '/terms-and-conditions' }),
+      body: new URLSearchParams({
+        locale: 'ar',
+        redirectTo: '/terms-and-conditions',
+      }),
     })
 
     const response = await action({ request })
@@ -1339,7 +1470,13 @@ describe('createLocaleAction', () => {
       mode: 'context',
       locales: ['en', 'ar'],
       defaultLocale: 'en',
-      persistence: [clientPersistence.custom({ write: async (_ctx, locale) => { writes.push(locale) } })],
+      persistence: [
+        clientPersistence.custom({
+          write: async (_ctx, locale) => {
+            writes.push(locale)
+          },
+        }),
+      ],
       catalogs: {
         en: async () => ({ messages: {} }),
         ar: async () => ({ messages: {} }),
@@ -1596,14 +1733,24 @@ describe('createLocaleAction', () => {
 
   it('merges Set-Cookie headers when one adapter is session-backed', async () => {
     const sessionJar = { cookie: '' }
-    const sessionStorage: Pick<SessionStorage, 'getSession' | 'commitSession'> = {
-      getSession: async () => ({ get: () => undefined, set: () => {}, has: () => false, unset: () => {}, flash: () => {}, id: '', data: {} }) as never,
-      commitSession: async () => {
-        const v = 'session=%7B%22locale%22%3A%22ar%22%7D'
-        sessionJar.cookie = v
-        return v
-      },
-    }
+    const sessionStorage: Pick<SessionStorage, 'getSession' | 'commitSession'> =
+      {
+        getSession: async () =>
+          ({
+            get: () => undefined,
+            set: () => {},
+            has: () => false,
+            unset: () => {},
+            flash: () => {},
+            id: '',
+            data: {},
+          }) as never,
+        commitSession: async () => {
+          const v = 'session=%7B%22locale%22%3A%22ar%22%7D'
+          sessionJar.cookie = v
+          return v
+        },
+      }
     const i18n = createLinguiRouter({
       server: true,
       mode: 'context',
@@ -1643,7 +1790,10 @@ describe('createLocaleAction', () => {
       persistence: [
         serverPersistence.custom({
           read: async () => null,
-          write: async () => [['Set-Cookie', 'a=1; Path=/'], ['Set-Cookie', 'b=2; Path=/']],
+          write: async () => [
+            ['Set-Cookie', 'a=1; Path=/'],
+            ['Set-Cookie', 'b=2; Path=/'],
+          ],
         }),
       ],
       catalogs: {
@@ -1659,7 +1809,10 @@ describe('createLocaleAction', () => {
 
     const response = await action({ request })
 
-    expect(response.headers.getSetCookie()).toEqual(['a=1; Path=/', 'b=2; Path=/'])
+    expect(response.headers.getSetCookie()).toEqual([
+      'a=1; Path=/',
+      'b=2; Path=/',
+    ])
   })
 
   it('merges headers across adapters with different header names', async () => {
@@ -1672,7 +1825,7 @@ describe('createLocaleAction', () => {
         serverPersistence.cookie('locale'),
         serverPersistence.custom({
           read: async () => null,
-          write: async () => ({ 'X-Locale': 'ar', 'Vary': 'Cookie' }),
+          write: async () => ({ 'X-Locale': 'ar', Vary: 'Cookie' }),
         }),
       ],
       catalogs: {
@@ -1758,7 +1911,17 @@ describe('createLocaleAction', () => {
 // the recursive `Serialize` step (which widens Lingui `Messages`) or preserves
 // the loader's declared return type verbatim.
 type RRSerializable =
-  | undefined | null | boolean | string | symbol | number | bigint | Date | URL | RegExp | Error
+  | undefined
+  | null
+  | boolean
+  | string
+  | symbol
+  | number
+  | bigint
+  | Date
+  | URL
+  | RegExp
+  | Error
   | Array<RRSerializable>
   | { [key: PropertyKey]: RRSerializable }
   | Map<RRSerializable, RRSerializable>
@@ -1788,7 +1951,11 @@ type ClientDataFunctionArgs<Params> = {
 }
 
 type RRSerializeFrom<F> = F extends (...args: infer A) => unknown
-  ? A extends [ClientLoaderFunctionArgs | ClientActionFunctionArgs | ClientDataFunctionArgs<unknown>]
+  ? A extends [
+      | ClientLoaderFunctionArgs
+      | ClientActionFunctionArgs
+      | ClientDataFunctionArgs<unknown>,
+    ]
     ? Awaited<ReturnType<F>>
     : RRSerialize<Awaited<ReturnType<F>>>
   : never
@@ -1814,7 +1981,9 @@ describe('loader type inference', () => {
     // loader's parameter type ever loosens so this discriminator falls through to
     // `RRSerialize`, `messages` widens to `{ [x]: string | (string | undefined[])[] }`
     // and apps are forced back to `as LinguiState` casts.
-    expectTypeOf<RRSerializeFrom<typeof loader>>().toEqualTypeOf<LinguiRootLoaderData>()
+    expectTypeOf<
+      RRSerializeFrom<typeof loader>
+    >().toEqualTypeOf<LinguiRootLoaderData>()
     expectTypeOf<RRSerializeFrom<typeof loader>>().toEqualTypeOf<LinguiState>()
   })
 })
@@ -1835,13 +2004,17 @@ describe('middleware export types', () => {
   it('createLinguiMiddleware matches the server `middleware` slot (Response result)', () => {
     const middleware = createLinguiMiddleware(i18n)
     // Server route slot: MiddlewareFunction<Response>
-    expectTypeOf<typeof middleware>().toMatchTypeOf<MiddlewareFunction<Response>>()
+    expectTypeOf<typeof middleware>().toMatchTypeOf<
+      MiddlewareFunction<Response>
+    >()
   })
 
   it('createLinguiClientMiddleware matches the `clientMiddleware` slot (DataStrategyResult map)', () => {
     const clientMiddleware = createLinguiClientMiddleware(i18n)
     // Client route slot: MiddlewareFunction<Record<string, DataStrategyResult>>
-    expectTypeOf<typeof clientMiddleware>().toMatchTypeOf<MiddlewareFunction<ClientResult>>()
+    expectTypeOf<typeof clientMiddleware>().toMatchTypeOf<
+      MiddlewareFunction<ClientResult>
+    >()
   })
 
   it('the server and client result types are distinct (invariant), so the two exports are needed', () => {
@@ -1849,12 +2022,16 @@ describe('middleware export types', () => {
     // A server-typed middleware must NOT be assignable to the client slot, which is
     // why the package ships a separate `createLinguiClientMiddleware`.
     const serverMiddleware = createLinguiMiddleware(i18n)
-    expectTypeOf<typeof serverMiddleware>().not.toMatchTypeOf<MiddlewareFunction<ClientResult>>()
+    expectTypeOf<typeof serverMiddleware>().not.toMatchTypeOf<
+      MiddlewareFunction<ClientResult>
+    >()
   })
 
   it('createLinguiClientMiddleware is not assignable to the server slot either', () => {
     const clientMiddleware = createLinguiClientMiddleware(i18n)
-    expectTypeOf<typeof clientMiddleware>().not.toMatchTypeOf<MiddlewareFunction<Response>>()
+    expectTypeOf<typeof clientMiddleware>().not.toMatchTypeOf<
+      MiddlewareFunction<Response>
+    >()
   })
 })
 
@@ -2035,5 +2212,3 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath('/\\\t/evil.com')).toBe('/')
   })
 })
-
-

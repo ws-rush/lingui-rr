@@ -8,20 +8,26 @@ export function normalizeLocaleCode(locale: string): string {
     .map((part, index) => {
       const lower = part.toLowerCase()
       if (index === 0) return lower
-      if (part.length === 4) return lower[0]!.toUpperCase() + lower.slice(1)
+      if (part.length === 4) return lower[0].toUpperCase() + lower.slice(1)
       if (part.length === 2 || part.length === 3) return lower.toUpperCase()
       return lower
     })
     .join('-')
 }
 
-export function matchSupportedLocale(candidate: string | null | undefined, supportedLocales: readonly string[], fallbackLocale: string): string {
+export function matchSupportedLocale(
+  candidate: string | null | undefined,
+  supportedLocales: readonly string[],
+  fallbackLocale: string,
+): string {
   if (!candidate) return fallbackLocale
   const supported = supportedLocales.map(normalizeLocaleCode)
   const normalized = normalizeLocaleCode(candidate)
 
   // 1. Try exact match first (case-insensitive)
-  const exact = supported.find((locale) => locale.toLowerCase() === normalized.toLowerCase())
+  const exact = supported.find(
+    (locale) => locale.toLowerCase() === normalized.toLowerCase(),
+  )
   if (exact) return exact
 
   // 2. Try progressive matching (split by hyphen and drop region/script components from the end)
@@ -38,7 +44,10 @@ export function matchSupportedLocale(candidate: string | null | undefined, suppo
   return baseMatch ?? fallbackLocale
 }
 
-export function parseCookie(header: string | null, name: string): string | null {
+export function parseCookie(
+  header: string | null,
+  name: string,
+): string | null {
   if (!header) return null
   for (const part of header.split(';')) {
     const [rawKey, ...rawValue] = part.split('=')
@@ -60,20 +69,31 @@ export function parseCookie(header: string | null, name: string): string | null 
 
 export function parseAcceptLanguage(value: string | null): string | null {
   if (!value) return null
-  return value
-    .split(',')
-    .map((part) => {
-      const [locale, ...params] = part.trim().split(';')
-      const q = params.find((param) => param.trim().startsWith('q='))?.split('=')[1]
-      const parsedQ = q ? Number(q) : 1
-      return { locale: locale?.trim(), q: isNaN(parsedQ) ? 0 : parsedQ }
-    })
-    .filter((item) => item.locale && item.q > 0)
-    .sort((a, b) => b.q - a.q)[0]?.locale ?? null
+  return (
+    value
+      .split(',')
+      .map((part) => {
+        const [locale, ...params] = part.trim().split(';')
+        const q = params
+          .find((param) => param.trim().startsWith('q='))
+          ?.split('=')[1]
+        const parsedQ = q ? Number(q) : 1
+        return { locale: locale?.trim(), q: isNaN(parsedQ) ? 0 : parsedQ }
+      })
+      .filter((item) => item.locale && item.q > 0)
+      .sort((a, b) => b.q - a.q)[0]?.locale ?? null
+  )
 }
 
-export function serializeCookie(name: string, value: string, options: CookieOptions = {}): string {
-  const parts = [`${name}=${encodeURIComponent(value)}`, `Path=${options.path ?? '/'}`]
+export function serializeCookie(
+  name: string,
+  value: string,
+  options: CookieOptions = {},
+): string {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    `Path=${options.path ?? '/'}`,
+  ]
   if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`)
   if (options.sameSite) parts.push(`SameSite=${options.sameSite}`)
   if (options.secure) parts.push('Secure')

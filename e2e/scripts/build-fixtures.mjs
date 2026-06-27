@@ -183,7 +183,7 @@ function i18nTsx(f) {
 ${locales}
   },
   defaultLocale: 'en',
-${f.context ? '' : "  prefixDefaultLocale: true,\n"}  detection: [serverDetectors.cookie('locale'), serverDetectors.acceptLanguage()],
+${f.context ? '' : '  prefixDefaultLocale: true,\n'}  detection: [serverDetectors.cookie('locale'), serverDetectors.acceptLanguage()],
   persistence: [serverPersistence.cookie('locale')],`
 
   const clientBlock = `  server: false,
@@ -192,7 +192,7 @@ ${f.context ? '' : "  prefixDefaultLocale: true,\n"}  detection: [serverDetector
 ${locales}
   },
   defaultLocale: 'en',
-${f.context ? '' : "  prefixDefaultLocale: false,\n"}  detection: ${
+${f.context ? '' : '  prefixDefaultLocale: false,\n'}  detection: ${
     f.context
       ? "[clientDetectors.localStorage('locale'), clientDetectors.navigator()]"
       : "[clientDetectors.cookie('locale'), clientDetectors.navigator()]"
@@ -329,7 +329,12 @@ export default { ssr: ${f.ssr} } satisfies Config
 const configs = {
   'ssr-url-prefix': { ssr: true, context: false, prefix: true, client: false },
   'ssr-context': { ssr: true, context: true, prefix: false, client: false },
-  'client-url-prefix': { ssr: false, context: false, prefix: false, client: true },
+  'client-url-prefix': {
+    ssr: false,
+    context: false,
+    prefix: false,
+    client: true,
+  },
   'client-context': { ssr: false, context: true, prefix: false, client: true },
 }
 

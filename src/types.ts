@@ -2,7 +2,9 @@ import type { Messages } from '@lingui/core'
 
 export type LocaleDirection = 'ltr' | 'rtl' | 'auto'
 export type LocaleMeta = { code: string; label: string; dir: LocaleDirection }
-export type LocaleInput = readonly string[] | Record<string, Partial<Omit<LocaleMeta, 'code'>>>
+export type LocaleInput =
+  | readonly string[]
+  | Record<string, Partial<Omit<LocaleMeta, 'code'>>>
 export type CatalogModule = { messages?: Messages } | Messages
 export type CatalogLoader = () => Promise<CatalogModule>
 export type Mode = 'url-prefix' | 'context'
@@ -17,13 +19,24 @@ export type ClientPersistenceContext = { request?: Request }
 
 export type Detector<Kind extends DetectorKind = DetectorKind> = {
   kind: Kind
-  detect(ctx: Kind extends 'server' ? ServerDetectorContext : ClientDetectorContext): Promise<string | null> | string | null
+  detect(
+    ctx: Kind extends 'server' ? ServerDetectorContext : ClientDetectorContext,
+  ): Promise<string | null> | string | null
 }
 
 export type Persistence<Kind extends PersistenceKind = PersistenceKind> = {
   kind: Kind
-  read?(ctx: Kind extends 'server' ? ServerPersistenceContext : ClientPersistenceContext): Promise<string | null> | string | null
-  write(ctx: Kind extends 'server' ? ServerPersistenceContext : ClientPersistenceContext, locale: string): Promise<void | HeadersInit> | void | HeadersInit
+  read?(
+    ctx: Kind extends 'server'
+      ? ServerPersistenceContext
+      : ClientPersistenceContext,
+  ): Promise<string | null> | string | null
+  write(
+    ctx: Kind extends 'server'
+      ? ServerPersistenceContext
+      : ClientPersistenceContext,
+    locale: string,
+  ): Promise<void | HeadersInit> | void | HeadersInit
 }
 
 export type BaseConfig<Server extends boolean> = {
@@ -33,8 +46,12 @@ export type BaseConfig<Server extends boolean> = {
   defaultLocale: string
   fallbackLocale?: string
   catalogs: Record<string, CatalogLoader>
-  detection?: Array<Server extends true ? Detector<'server'> : Detector<'client'>>
-  persistence?: Array<Server extends true ? Persistence<'server'> : Persistence<'client'>>
+  detection?: Array<
+    Server extends true ? Detector<'server'> : Detector<'client'>
+  >
+  persistence?: Array<
+    Server extends true ? Persistence<'server'> : Persistence<'client'>
+  >
   prefixDefaultLocale?: boolean
   ignorePaths?: Array<RegExp | string>
 }
