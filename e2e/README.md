@@ -48,5 +48,5 @@ are started fresh per run.
 ## CI
 
 GitHub Actions runs the full matrix after building `lingui-rr` (see
-`/.github/workflows/verify.yml`, job `e2e`). The e2e job installs Playwright's
+`/.github/workflows/verify.yml`, job `lingui-rr-e2e`). The `lingui-rr-e2e` job installs Playwright's
 chromium and runs all four projects.

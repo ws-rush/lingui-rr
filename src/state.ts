@@ -19,16 +19,25 @@ import { rewriteLocalePath } from './path'
 
 async function readActionPayload(
   request: Request,
-): Promise<{ locale: string | null; redirectTo: string }> {
+): Promise<{ locale: string | null; redirectTo: string } | null> {
   const contentType = request.headers.get('Content-Type') ?? ''
   if (contentType.includes('application/json')) {
-    const body = (await request.json()) as {
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return null
+    }
+    if (body == null || typeof body !== 'object' || Array.isArray(body)) {
+      return null
+    }
+    const { locale, redirectTo } = body as {
       locale?: unknown
       redirectTo?: unknown
     }
     return {
-      locale: typeof body.locale === 'string' ? body.locale : null,
-      redirectTo: typeof body.redirectTo === 'string' ? body.redirectTo : '/',
+      locale: typeof locale === 'string' ? locale : null,
+      redirectTo: typeof redirectTo === 'string' ? redirectTo : '/',
     }
   }
   const formData = await request.formData()
@@ -42,7 +51,11 @@ async function readActionPayload(
 
 export function createLocaleAction(router: LinguiRouter) {
   return async ({ request }: { request: Request }): Promise<Response> => {
-    const { locale: rawLocale, redirectTo } = await readActionPayload(request)
+    const payload = await readActionPayload(request)
+    if (!payload) {
+      return new Response('Invalid JSON payload', { status: 400 })
+    }
+    const { locale: rawLocale, redirectTo } = payload
     const locale = matchSupportedLocale(
       rawLocale,
       router.localeCodes,
