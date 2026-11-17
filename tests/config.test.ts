@@ -190,4 +190,28 @@ describe('catalog key normalization', () => {
     expect(state.locale).toBe('en-US')
     expect(state.messages).toEqual({ hi: 'Hi' })
   })
+
+  it('defaults omitted label and dir in object-form locales and lists multiple duplicates', () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: { en: {} },
+      defaultLocale: 'en',
+      catalogs: { en: async () => ({ messages: {} }) },
+    })
+    expect(router.locales).toEqual([{ code: 'en', label: 'en', dir: 'ltr' }])
+
+    expect(() =>
+      validateConfig({
+        server: true,
+        mode: 'context',
+        locales: ['en', 'EN', 'ar', 'AR'],
+        defaultLocale: 'en',
+        catalogs: {
+          en: async () => ({ messages: {} }),
+          ar: async () => ({ messages: {} }),
+        },
+      }),
+    ).toThrow(/duplicate locale codes: en, ar/)
+  })
 })

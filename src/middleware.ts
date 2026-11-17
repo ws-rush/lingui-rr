@@ -278,10 +278,9 @@ export function createLinguiShouldRevalidate(
       : null
     if (!formActionPathname) return defaultShouldRevalidate
 
-    let cleanPath = formActionPathname.replace(/\/$/, '')
-    if (cleanPath.endsWith('.data')) {
-      cleanPath = cleanPath.slice(0, -5).replace(/\/$/, '')
-    }
+    const cleanPath = formActionPathname.endsWith('.data')
+      ? formActionPathname.slice(0, -5)
+      : formActionPathname
 
     const segments = cleanPath.split('/').filter(Boolean)
     const first = segments[0]

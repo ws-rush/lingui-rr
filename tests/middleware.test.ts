@@ -1334,4 +1334,111 @@ describe('createLinguiShouldRevalidate', () => {
       }),
     ).toBe(false)
   })
+
+  it('strips trailing slash before and after .data in formAction', () => {
+    const currentUrl = new URL('https://example.com/ar/about')
+    expect(
+      shouldRevalidate({
+        ...baseArgs,
+        currentUrl,
+        nextUrl: currentUrl,
+        formAction: '/en/change-locale/',
+        formMethod: 'POST',
+      }),
+    ).toBe(true)
+    expect(
+      shouldRevalidate({
+        ...baseArgs,
+        currentUrl,
+        nextUrl: currentUrl,
+        formAction: '/en/change-locale/.data',
+        formMethod: 'POST',
+      }),
+    ).toBe(true)
+  })
+})
+
+describe('middleware mutation edge cases', () => {
+  it('redirects HEAD requests and unsupported locale-like prefixes when prefixDefaultLocale is false', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'url-prefix',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      prefixDefaultLocale: false,
+      catalogs: {
+        en: async () => ({ messages: {} }),
+        ar: async () => ({ messages: {} }),
+      },
+    })
+    const middleware = createLinguiMiddleware(router)
+
+    const headRes = await middleware(
+      {
+        request: new Request('https://example.com/fr/about', {
+          method: 'HEAD',
+        }),
+        url: new URL('https://example.com/fr/about'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      },
+      async () => new Response('ok'),
+    )
+    expect((headRes as Response).status).toBe(302)
+    expect((headRes as Response).headers.get('Location')).toBe('/about')
+  })
+
+  it('redirects root "/" to detected non-default locale in url-prefix mode', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'url-prefix',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      detection: [serverDetectors.acceptLanguage()],
+      catalogs: {
+        en: async () => ({ messages: {} }),
+        ar: async () => ({ messages: {} }),
+      },
+    })
+    const middleware = createLinguiMiddleware(router)
+    const res = await middleware(
+      {
+        request: new Request('https://example.com/', {
+          headers: { 'Accept-Language': 'ar' },
+        }),
+        url: new URL('https://example.com/'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      },
+      async () => new Response('ok'),
+    )
+    expect((res as Response).status).toBe(302)
+    expect((res as Response).headers.get('Location')).toBe('/ar')
+  })
+
+  it('throws in createLinguiRootLoader on /api/data in context mode when middleware did not run', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => ({ messages: {} }),
+        ar: async () => ({ messages: {} }),
+      },
+    })
+    const loader = createLinguiRootLoader(router)
+
+    await expect(
+      loader({
+        request: new Request('https://example.com/api/data'),
+        url: new URL('https://example.com/api/data'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      }),
+    ).rejects.toThrow(/Lingui state was not found in React Router context/)
+  })
 })

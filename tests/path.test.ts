@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { rewriteLocalePath } from '../src/index'
+import { isIgnoredPath, looksLikeLocale } from '../src/path'
 
 describe('URL prefix rewrite', () => {
   it('strictly prefixes unprefixed app paths', () => {
@@ -95,5 +96,27 @@ describe('URL prefix rewrite', () => {
     expect(
       rewriteLocalePath('/api/users', 'ar', ['en', 'ar'], { ignorePaths }),
     ).toBe('/api/users')
+  })
+
+  it('falls back to options.defaultLocale when targetLocale is unsupported', () => {
+    expect(
+      rewriteLocalePath('/about', 'xx', ['en', 'ar'], { defaultLocale: 'ar' }),
+    ).toBe('/ar/about')
+  })
+})
+
+describe('isIgnoredPath and looksLikeLocale boundaries', () => {
+  it('matches string ignorePaths by prefix only', () => {
+    expect(isIgnoredPath('/api/users', ['/api'])).toBe(true)
+    expect(isIgnoredPath('/v1/api', ['/api'])).toBe(false)
+  })
+
+  it('validates ISO-639-1, excluded codes, hyphenated subtags, and anchors in looksLikeLocale', () => {
+    expect(looksLikeLocale('fr')).toBe(true)
+    expect(looksLikeLocale('he')).toBe(false)
+    expect(looksLikeLocale('xx')).toBe(false)
+    expect(looksLikeLocale('zz-top')).toBe(true)
+    expect(looksLikeLocale('12-en')).toBe(false)
+    expect(looksLikeLocale('en-123456789')).toBe(false)
   })
 })

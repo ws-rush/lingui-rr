@@ -7,6 +7,7 @@ import {
 } from '../src/index'
 import {
   appendDataSuffix,
+  appendHeaders,
   parseAcceptLanguage,
   parseCookie,
   safeRedirectPath,
@@ -15,6 +16,7 @@ import {
 describe('locale normalization', () => {
   it('canonicalizes BCP-47-ish casing', () => {
     expect(normalizeLocaleCode('en-us')).toBe('en-US')
+    expect(normalizeLocaleCode('es-419')).toBe('es-419')
     expect(normalizeLocaleCode('ZH-hant-tw')).toBe('zh-Hant-TW')
   })
 
@@ -162,6 +164,7 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath('https://evil.com')).toBe('/')
     expect(safeRedirectPath('//')).toBe('/')
     expect(safeRedirectPath('/%2f/evil.com')).toBe('/%2f/evil.com')
+    expect(safeRedirectPath('/foo//bar')).toBe('/foo//bar')
   })
 
   it('blocks control character bypasses (tab, newline, CR)', () => {
@@ -170,6 +173,34 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath('/\r/evil.com')).toBe('/')
     expect(safeRedirectPath('/\n\r\t/evil.com')).toBe('/')
     expect(safeRedirectPath('/\\\t/evil.com')).toBe('/')
+  })
+})
+
+describe('parseAcceptLanguage and parseCookie edge cases', () => {
+  it('excludes q=0, sorts by descending quality, and handles whitespace', () => {
+    expect(parseAcceptLanguage(null)).toBeNull()
+    expect(parseAcceptLanguage('fr;q=0')).toBeNull()
+    expect(parseAcceptLanguage('fr;q=0, en; foo=1; q=0.5,  ar ; q=0.9')).toBe(
+      'ar',
+    )
+  })
+
+  it('handles null headers, = in values, malformed URI encoding, and partial quotes in parseCookie', () => {
+    expect(parseCookie(null, 'locale')).toBeNull()
+    expect(parseCookie('locale=a=b', 'locale')).toBe('a=b')
+    expect(parseCookie('locale=%E0%A4%A; locale=en', 'locale')).toBeNull()
+    expect(parseCookie('locale="en', 'locale')).toBe('"en')
+    expect(parseCookie('locale=en"', 'locale')).toBe('en"')
+  })
+
+  it('appendHeaders ignores undefined init', () => {
+    const headers = new Headers({ 'X-Test': '1' })
+    appendHeaders(headers, undefined)
+    expect(headers.get('X-Test')).toBe('1')
+  })
+
+  it('matchSupportedLocale handles progressive subtag drop and base fallback', () => {
+    expect(matchSupportedLocale('zh-Latn-TW', ['zh', 'en'], 'en')).toBe('zh')
   })
 })
 

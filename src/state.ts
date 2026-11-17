@@ -156,7 +156,7 @@ function messagesFromCatalogModule(mod: CatalogModule): unknown {
   if (!('messages' in unwrapped)) return unwrapped
 
   const messages = unwrapped.messages
-  if (messages === null || messages === undefined) return messages
+  if (messages == null) return null
   return isPlainMessagesObject(messages) ? messages : unwrapped
 }
 
@@ -168,20 +168,11 @@ function unwrapDefaultCatalogModule(mod: CatalogModule): CatalogModule {
 function hasObjectDefaultExport(
   mod: CatalogModule,
 ): mod is CatalogModule & { default: CatalogModule } {
-  return (
-    'default' in mod &&
-    mod.default != null &&
-    typeof mod.default === 'object' &&
-    !Array.isArray(mod.default)
-  )
+  return 'default' in mod && isMessagesRecord(mod.default)
 }
 
 function hasUsableMessagesExport(mod: CatalogModule): boolean {
-  return (
-    'messages' in mod &&
-    mod.messages != null &&
-    isPlainMessagesObject(mod.messages)
-  )
+  return 'messages' in mod && isMessagesRecord(mod.messages)
 }
 
 function isPlainMessagesObject(value: unknown): value is Messages {
@@ -193,12 +184,10 @@ function isMessagesRecord(value: unknown): value is Messages {
 }
 
 function describeCatalogShape(value: unknown): string {
-  if (value === null) return 'null'
-  if (value === undefined) return 'undefined'
+  if (value == null) return String(value)
   if (Array.isArray(value)) return 'array'
   if (typeof value !== 'object') return typeof value
   const keys = Object.keys(value)
-  if (keys.length === 0) return '{} (empty object)'
   return `object with keys [${keys.slice(0, 5).join(', ')}${keys.length > 5 ? ', ...' : ''}]`
 }
 

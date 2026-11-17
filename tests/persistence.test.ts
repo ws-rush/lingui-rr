@@ -197,3 +197,37 @@ describe('session persistence', () => {
     expect(read).toBe('ar')
   })
 })
+
+describe('persistence defaults and Node fallbacks', () => {
+  it('serverPersistence.cookie defaults name to "locale" and reads from Cookie header', async () => {
+    const persistence = serverPersistence.cookie()
+    expect(persistence.kind).toBe('server')
+    expect(
+      await persistence.read?.({
+        request: new Request('https://example.com', {
+          headers: { Cookie: 'locale=ar' },
+        }),
+      }),
+    ).toBe('ar')
+  })
+
+  it('clientPersistence.cookie defaults name to "locale" and reads from request in Node', async () => {
+    const persistence = clientPersistence.cookie()
+    expect(persistence.kind).toBe('client')
+    expect(
+      await persistence.read?.({
+        request: new Request('https://example.com', {
+          headers: { Cookie: 'locale=en' },
+        }),
+      }),
+    ).toBe('en')
+    expect(await persistence.read?.({})).toBeNull()
+  })
+
+  it('clientPersistence.localStorage defaults key to "locale" and returns null in Node', async () => {
+    const persistence = clientPersistence.localStorage()
+    expect(persistence.kind).toBe('client')
+    expect(await persistence.read?.({})).toBeNull()
+    await expect(persistence.write({}, 'en')).resolves.toBeUndefined()
+  })
+})

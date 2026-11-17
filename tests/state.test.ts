@@ -4,6 +4,7 @@ import {
   clientPersistence,
   createLinguiRouter,
   createLocaleAction,
+  getHtmlAttrs,
   getLocaleLabel,
   loadLinguiState,
   serverPersistence,
@@ -721,5 +722,105 @@ describe('createLocaleAction', () => {
     expect(response.status).toBe(302)
     expect(response.headers.get('Location')).toBe('/current')
     expect(response.headers.getSetCookie()).toEqual([])
+  })
+})
+
+describe('state edge cases and error shape descriptions', () => {
+  it('describes undefined, array, empty object, and >5-key catalog shapes in errors', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: ['en', 'ar', 'fr', 'de'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => ({ messages: undefined }) as never,
+        ar: async () => ['bad'] as never,
+        fr: async () =>
+          ({ messages: [], a: 1, b: 2, c: 3, d: 4, e: 5 }) as never,
+        de: async () =>
+          ({ messages: null, a: 1, b: 2, c: 3, d: 4, e: 5 }) as never,
+      },
+    })
+
+    await expect(loadLinguiState(router, 'en')).rejects.toThrow(
+      /object with keys \[messages\]/,
+    )
+    await expect(loadLinguiState(router, 'ar')).rejects.toThrow(/got array/)
+    const frState = await loadLinguiState(router, 'fr')
+    expect(frState.messages).toEqual({
+      messages: [],
+      a: 1,
+      b: 2,
+      c: 3,
+      d: 4,
+      e: 5,
+    })
+    await expect(loadLinguiState(router, 'de')).rejects.toThrow(
+      /object with keys \[messages, a, b, c, d, \.\.\.\]/,
+    )
+
+    const emptyRouter = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => ({ messages: null }) as never,
+        ar: async () => ({ default: { messages: {} } }) as never,
+      },
+    })
+    await expect(loadLinguiState(emptyRouter, 'en')).rejects.toThrow(
+      /did not contain usable messages/,
+    )
+
+    const undefModRouter = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: ['en'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => undefined as never,
+      },
+    })
+    await expect(loadLinguiState(undefModRouter, 'en')).rejects.toThrow(
+      /resolved to undefined/,
+    )
+  })
+
+  it('defaults JSON and FormData non-string locale/redirectTo and handles missing Content-Type', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'context',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => ({ messages: {} }),
+        ar: async () => ({ messages: {} }),
+      },
+    })
+    const action = createLocaleAction(router)
+
+    const jsonRes = await action({
+      request: new Request('https://example.com/change-locale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: 123, redirectTo: 456 }),
+      }),
+    })
+    expect(jsonRes.headers.get('Location')).toBe('/')
+
+    const formData = new FormData()
+    formData.append('locale', 'ar')
+    const formRes = await action({
+      request: new Request('https://example.com/change-locale', {
+        method: 'POST',
+        body: formData,
+      }),
+    })
+    expect(formRes.headers.get('Location')).toBe('/')
+  })
+
+  it('getHtmlAttrs defaults dir to "ltr" when locales list is omitted', () => {
+    expect(getHtmlAttrs('ar')).toEqual({ lang: 'ar', dir: 'ltr' })
   })
 })

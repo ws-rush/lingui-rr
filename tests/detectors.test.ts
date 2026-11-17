@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { runDetectors, serverDetectors } from '../src/index'
+import { describe, expect, it, vi } from 'vitest'
+import { clientDetectors, runDetectors, serverDetectors } from '../src/index'
 
 describe('detectors', () => {
   it('runs detectors by priority', async () => {
@@ -37,5 +37,41 @@ describe('detectors', () => {
 
     const locale = await serverDetectors.acceptLanguage().detect({ request })
     expect(locale).toBe('ar-EG')
+  })
+
+  it('uses default cookie name and custom server detector with kind "server"', async () => {
+    const request = new Request('https://example.com', {
+      headers: { Cookie: 'locale=ar' },
+    })
+    const cookieDetector = serverDetectors.cookie()
+    expect(cookieDetector.kind).toBe('server')
+    expect(await cookieDetector.detect({ request })).toBe('ar')
+
+    const custom = serverDetectors.custom({ detect: () => 'en' })
+    expect(custom.kind).toBe('server')
+    expect(await custom.detect({ request })).toBe('en')
+  })
+
+  it('handles clientDetectors defaults and missing browser globals safely', async () => {
+    const request = new Request('https://example.com', {
+      headers: { Cookie: 'locale=ar' },
+    })
+    const cookieDetector = clientDetectors.cookie()
+    expect(cookieDetector.kind).toBe('client')
+    expect(await cookieDetector.detect({ request })).toBe('ar')
+    expect(await cookieDetector.detect({})).toBeNull()
+
+    const lsDetector = clientDetectors.localStorage()
+    expect(lsDetector.kind).toBe('client')
+    expect(await lsDetector.detect({})).toBeNull()
+
+    const navDetector = clientDetectors.navigator()
+    expect(navDetector.kind).toBe('client')
+    vi.stubGlobal('navigator', undefined)
+    try {
+      expect(await navDetector.detect({})).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

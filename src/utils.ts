@@ -38,10 +38,7 @@ export function matchSupportedLocale(
     if (match) return match
   }
 
-  // 3. Try matching by base language (the very first segment) as a final fallback before fallbackLocale
-  const base = parts[0]?.toLowerCase()
-  const baseMatch = supported.find((locale) => locale.toLowerCase() === base)
-  return baseMatch ?? fallbackLocale
+  return fallbackLocale
 }
 
 export function parseCookie(
