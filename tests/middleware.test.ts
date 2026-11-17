@@ -196,6 +196,87 @@ describe('middleware and loader', () => {
     ).rejects.toThrow(/Lingui state was not found in React Router context/)
   })
 
+  it('root loader resolves fallback state on ignoredPaths in url-prefix mode when middleware skips context', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'url-prefix',
+      locales: {
+        en: { label: 'English', dir: 'ltr' },
+        ar: { label: 'العربية', dir: 'rtl' },
+      },
+      defaultLocale: 'en',
+      detection: [serverDetectors.acceptLanguage()],
+      catalogs: {
+        en: async () => ({ messages: { hello: 'Hello' } }),
+        ar: async () => ({ messages: { hello: 'مرحبا' } }),
+      },
+    })
+    const context = new RouterContextProvider()
+    const middleware = createLinguiMiddleware(router)
+    const loader = createLinguiRootLoader(router)
+    const request = new Request('https://example.com/api/data', {
+      headers: { 'Accept-Language': 'ar' },
+    })
+    let calledNext = false
+
+    await middleware(
+      {
+        request,
+        url: new URL(request.url),
+        context,
+        params: {},
+        pattern: '*',
+      },
+      async () => {
+        calledNext = true
+        return new Response('ok')
+      },
+    )
+
+    expect(calledNext).toBe(true)
+    expect(context.get(linguiRouterContext)).toBeNull()
+
+    await expect(
+      loader({
+        request,
+        url: new URL(request.url),
+        context,
+        params: {},
+        pattern: '*',
+      }),
+    ).resolves.toMatchObject({
+      locale: 'ar',
+      localeMeta: { code: 'ar', label: 'العربية', dir: 'rtl' },
+      messages: { hello: 'مرحبا' },
+      htmlAttrs: { lang: 'ar', dir: 'rtl' },
+    })
+  })
+
+  it('root loader throws clear error on non-ignored path in url-prefix mode when context is missing', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'url-prefix',
+      locales: ['en', 'ar'],
+      defaultLocale: 'en',
+      catalogs: {
+        en: async () => ({ messages: {} }),
+        ar: async () => ({ messages: {} }),
+      },
+    })
+    const loader = createLinguiRootLoader(router)
+    const context = new RouterContextProvider()
+
+    await expect(
+      loader({
+        request: new Request('https://example.com/about'),
+        url: new URL('https://example.com/about'),
+        context,
+        params: {},
+        pattern: '*',
+      }),
+    ).rejects.toThrow(/Lingui state was not found in React Router context/)
+  })
+
   it('root loader returns only the explicit serializable state boundary', async () => {
     const i18n = createLinguiRouter({
       server: true,

@@ -232,15 +232,28 @@ export function createLinguiClientMiddleware(
   ) as MiddlewareFunction<ClientMiddlewareResult>
 }
 
-export function createLinguiRootLoader(_router: LinguiRouter) {
+export function createLinguiRootLoader(router: LinguiRouter) {
   return async ({
     context,
+    request,
   }: LoaderFunctionArgs): Promise<LinguiRootLoaderData> => {
     const state = context.get<LinguiState | null>(linguiRouterContext)
-    if (!state)
+    if (!state) {
+      if (
+        router.config.mode === 'url-prefix' &&
+        isIgnoredPath(
+          parseRequestPath(request).pathname,
+          router.config.ignorePaths,
+        )
+      ) {
+        const locale = await resolveDetectedLocale(router, request)
+        const fallbackState = await loadLinguiState(router, locale)
+        return toLinguiRootLoaderData(fallbackState)
+      }
       throw new Error(
         'Lingui state was not found in React Router context. Did createLinguiMiddleware run before createLinguiRootLoader?',
       )
+    }
     return toLinguiRootLoaderData(state)
   }
 }
