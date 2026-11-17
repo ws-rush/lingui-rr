@@ -10,7 +10,7 @@ This project uses `pnpm` workspaces for local development and E2E test orchestra
 
 ### Prerequisites
 
-- **Node.js**: `v22.22` or newer (matching `.node-version` / `engines`)
+- **Node.js**: `v22.22` or newer (matching `mise.toml` / `engines`)
 - **pnpm**: `v10.10.0` or newer
 
 ### Installation
@@ -52,7 +52,7 @@ During development, you can run the following validation scripts:
   pnpm --filter @lingui-rr/e2e install-browsers
 
   # Run the E2E tests
-  pnpm --filter @lingui-rr/e2e test
+  pnpm test:e2e
   ```
 
 ---
@@ -85,9 +85,9 @@ We use the interactive version bumping tool `bumpp` to manage version upgrades, 
      ...
    ```
 3. Once you choose the version:
-   - The tool updates `"version"` in [package.json](file:///package.json).
+   - The tool updates `"version"` in [package.json](./package.json).
    - It creates a git commit (e.g. `v0.1.1`).
    - It tags the commit with the new version (e.g. `v0.1.1`).
    - It pushes both the commit and tag to GitHub.
 
-Our GitHub Actions workflow at [.github/workflows/publish.yml](file:///.github/workflows/publish.yml) will automatically run, build the package, and publish it to the npm registry.
+Our GitHub Actions workflow at [.github/workflows/publish.yml](./.github/workflows/publish.yml) will automatically run, build the package, and publish it to the npm registry.

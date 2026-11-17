@@ -22,11 +22,11 @@ The behavior of `lingui-rr` is governed by the `createLinguiRouter()` configurat
 
 ### `locales`
 
-- **Type**: `string[] | Record<string, { label: string; dir?: 'ltr' | 'rtl' }>`
+- **Type**: `readonly string[] | Record<string, { label?: string; dir?: 'ltr' | 'rtl' | 'auto' }>`
 - **Required**: Yes
 - Defines the supported locales. You can pass a simple array of locale strings or a metadata record.
 - Simple array elements are normalized internally: `"en"` becomes `{ code: "en", label: "en", dir: "ltr" }`.
-- If a metadata record is provided, `"dir"` defaults to `"ltr"` unless specified.
+- If a metadata record is provided, `"label"` defaults to the normalized locale code and `"dir"` defaults to `"ltr"` unless specified.
 
 ### `defaultLocale`
 
@@ -95,7 +95,7 @@ The behavior of `lingui-rr` is governed by the `createLinguiRouter()` configurat
 
 ### `catalogs`
 
-- **Type**: `Record<string, () => Promise<any>>`
+- **Type**: `Record<string, CatalogLoader>`
 - **Required**: Yes
 - An object mapping each supported locale to a dynamic import function that fetches the compiled catalog.
 - **Supported catalog shapes**:
