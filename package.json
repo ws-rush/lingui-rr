@@ -30,6 +30,8 @@
   ],
   "scripts": {
     "test": "vitest run --dir tests",
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "test:e2e": "pnpm build && pnpm pack && rm -rf e2e/node_modules/lingui-rr && mkdir -p e2e/node_modules/lingui-rr && tar -xzf lingui-rr-*.tgz -C e2e/node_modules/lingui-rr --strip-components=1 && rm -f lingui-rr-*.tgz && pnpm --filter @lingui-rr/e2e test",
     "test:all": "pnpm test && pnpm test:e2e",
     "fallow": "fallow audit",
@@ -62,8 +64,11 @@
   "devDependencies": {
     "@lingui/core": "^6.4.0",
     "@lingui/react": "^6.4.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "4.1.9",
     "bumpp": "^11.1.0",
     "fallow": "^2.102.0",
     "oxfmt": "^0.56.0",

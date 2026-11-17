@@ -141,3 +141,7 @@ Thumbs.db
 # Vitepress
 docs/.vitepress/dist
 docs/.vitepress/cache
+
+# Stryker mutation testing
+.stryker-tmp/
+reports/
