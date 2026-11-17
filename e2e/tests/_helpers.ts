@@ -57,26 +57,15 @@ const ABOUT_COPY = {
 
 async function assertHomeLocale(page: Page, locale: 'en' | 'ar') {
   const copy = HOME_COPY[locale]
-  await page.waitForSelector('[data-testid=greeting]')
-  const text = await greeting(page).textContent()
-  if (text !== copy.greeting) {
-    throw new Error(`expected ${locale} greeting, got: ${text}`)
-  }
+  await expect(greeting(page)).toHaveText(copy.greeting)
   await assertHtmlAttrs(page, copy.lang, copy.dir)
   await assertMarkers(page, copy.lang, copy.dir)
 }
 
 async function assertAboutLocale(page: Page, locale: 'en' | 'ar') {
   const copy = ABOUT_COPY[locale]
-  await page.waitForSelector('[data-testid=about-title]')
-  const title = await aboutTitle(page).textContent()
-  if (title !== copy.title) {
-    throw new Error(`expected ${locale} about title, got: ${title}`)
-  }
-  const body = await aboutBody(page).textContent()
-  if (body !== copy.body) {
-    throw new Error(`expected ${locale} about body, got: ${body}`)
-  }
+  await expect(aboutTitle(page)).toHaveText(copy.title)
+  await expect(aboutBody(page)).toHaveText(copy.body)
   await assertHtmlAttrs(page, copy.lang, copy.dir)
   await assertMarkers(page, copy.lang, copy.dir)
 }
@@ -100,20 +89,13 @@ export async function assertAboutArabic(page: Page) {
 }
 
 export async function assertHtmlAttrs(page: Page, lang: string, dir: string) {
-  const htmlLang = await page.locator('html').getAttribute('lang')
-  const htmlDir = await page.locator('html').getAttribute('dir')
-  if (htmlLang !== lang)
-    throw new Error(`expected <html lang="${lang}">, got "${htmlLang}"`)
-  if (htmlDir !== dir)
-    throw new Error(`expected <html dir="${dir}">, got "${htmlDir}"`)
+  await expect(page.locator('html')).toHaveAttribute('lang', lang)
+  await expect(page.locator('html')).toHaveAttribute('dir', dir)
 }
 
 export async function assertMarkers(page: Page, locale: string, dir: string) {
-  const loc = await localeText(page).textContent()
-  const d = await dirText(page).textContent()
-  if (loc !== locale)
-    throw new Error(`expected locale marker "${locale}", got "${loc}"`)
-  if (d !== dir) throw new Error(`expected dir marker "${dir}", got "${d}"`)
+  await expect(localeText(page)).toHaveText(locale)
+  await expect(dirText(page)).toHaveText(dir)
 }
 
 // Submit the locale-switch form for the given locale and wait for the
