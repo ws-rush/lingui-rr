@@ -7,8 +7,13 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from 'react-router'
 import type { LinguiRouter, LinguiState, LinguiRootLoaderData } from './types'
-import { matchSupportedLocale, appendDataSuffix } from './utils'
-import { loadLinguiState, toLinguiRootLoaderData } from './state'
+import { matchSupportedLocale, appendDataSuffix, appendHeaders } from './utils'
+import {
+  loadLinguiState,
+  toLinguiRootLoaderData,
+  getClientActiveLocale,
+  setClientActiveLocale,
+} from './state'
 import { isIgnoredPath, rewriteLocalePath, looksLikeLocale } from './path'
 import { linguiRouterContext } from './context'
 import { runDetectors } from './detectors'
@@ -33,8 +38,54 @@ function getPathLocale(
   }
 }
 
-function redirectResponse(location: string): Response {
-  return redirect(location)
+function redirectResponse(
+  location: string,
+  headers?: Headers | null,
+): Response {
+  return headers ? redirect(location, { headers }) : redirect(location)
+}
+
+async function syncPersistence(
+  router: LinguiRouter,
+  request: Request,
+  locale: string,
+): Promise<Headers | null> {
+  const persistences = router.config.persistence ?? []
+  if (persistences.length === 0) return null
+
+  const headers = new Headers()
+  let hasHeaders = false
+
+  for (const persistence of persistences) {
+    if (persistence.read) {
+      const current = await persistence.read({ request } as never)
+      const normalized = current
+        ? matchSupportedLocale(current, router.localeCodes, '')
+        : ''
+      if (normalized === locale) continue
+    }
+    const result = await persistence.write({ request } as never, locale)
+    if (result) {
+      appendHeaders(headers, result)
+      hasHeaders = true
+    }
+  }
+
+  return hasHeaders ? headers : null
+}
+
+function appendResponseHeaders(
+  result: Response | ClientMiddlewareResult,
+  headers: Headers | null,
+): Response | ClientMiddlewareResult {
+  if (!headers || !(result instanceof Response)) return result
+  const nextHeaders = new Headers(result.headers)
+  headers.forEach((value, key) => nextHeaders.append(key, value))
+  return new Response(result.body, {
+    status: result.status,
+    statusText: result.statusText,
+    headers: nextHeaders,
+  })
 }
 
 async function resolveDetectedLocale(
@@ -141,6 +192,7 @@ async function handleCanonicalLocalePath(
   next: LinguiMiddlewareNext,
   requestPath: ParsedRequestPath,
   pathLocale: ReturnType<typeof getPathLocale>,
+  isClient: boolean,
 ): ReturnType<LinguiMiddlewareNext> {
   if (methodAllowsRedirect(args.request.method)) {
     const redirectResult = defaultLocalePrefixRedirect(
@@ -148,10 +200,24 @@ async function handleCanonicalLocalePath(
       requestPath,
       pathLocale,
     )
-    if (redirectResult) return redirectResult
+    if (redirectResult) {
+      if (isClient) setClientActiveLocale(router, router.defaultLocale)
+      const headers = await syncPersistence(
+        router,
+        args.request,
+        router.defaultLocale,
+      )
+      return appendResponseHeaders(redirectResult, headers)
+    }
   }
 
-  return continueWithLocaleState(router, args, next, pathLocale.locale!)
+  const locale = pathLocale.locale!
+  if (isClient) setClientActiveLocale(router, locale)
+  const headers = methodAllowsRedirect(args.request.method)
+    ? await syncPersistence(router, args.request, locale)
+    : null
+  const result = await continueWithLocaleState(router, args, next, locale)
+  return appendResponseHeaders(result, headers)
 }
 
 async function handleMissingLocalePath(
@@ -160,8 +226,11 @@ async function handleMissingLocalePath(
   next: LinguiMiddlewareNext,
   requestPath: ParsedRequestPath,
   pathLocale: ReturnType<typeof getPathLocale>,
+  isClient: boolean,
 ): ReturnType<LinguiMiddlewareNext> {
-  const detectedLocale = await resolveDetectedLocale(router, args.request)
+  const detectedLocale =
+    (isClient ? getClientActiveLocale(router) : null) ??
+    (await resolveDetectedLocale(router, args.request))
   const targetLocale = pathLocale.supported
     ? pathLocale.locale!
     : detectedLocale
@@ -177,6 +246,7 @@ async function handleMissingLocalePath(
     canContinueWithoutRedirect ||
     !methodAllowsRedirect(args.request.method)
   ) {
+    if (isClient) setClientActiveLocale(router, targetLocale)
     return continueWithLocaleState(router, args, next, targetLocale)
   }
 
@@ -187,6 +257,7 @@ async function handleMissingLocalePath(
 
 function createLinguiMiddlewareImpl(
   router: LinguiRouter,
+  isClient: boolean,
 ): LinguiMiddlewareFunction {
   return async (args, next) => {
     const requestPath = parseRequestPath(args.request)
@@ -211,17 +282,28 @@ function createLinguiMiddlewareImpl(
         next,
         requestPath,
         pathLocale,
+        isClient,
       )
     }
 
-    return handleMissingLocalePath(router, args, next, requestPath, pathLocale)
+    return handleMissingLocalePath(
+      router,
+      args,
+      next,
+      requestPath,
+      pathLocale,
+      isClient,
+    )
   }
 }
 
 export function createLinguiMiddleware(
   router: LinguiRouter,
 ): MiddlewareFunction<Response> {
-  return createLinguiMiddlewareImpl(router) as MiddlewareFunction<Response>
+  return createLinguiMiddlewareImpl(
+    router,
+    false,
+  ) as MiddlewareFunction<Response>
 }
 
 export function createLinguiClientMiddleware(
@@ -229,6 +311,7 @@ export function createLinguiClientMiddleware(
 ): MiddlewareFunction<ClientMiddlewareResult> {
   return createLinguiMiddlewareImpl(
     router,
+    true,
   ) as MiddlewareFunction<ClientMiddlewareResult>
 }
 

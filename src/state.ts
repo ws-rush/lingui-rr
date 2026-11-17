@@ -17,6 +17,19 @@ import {
 } from './utils'
 import { rewriteLocalePath } from './path'
 
+const clientActiveLocales = new WeakMap<LinguiRouter, string>()
+
+export function getClientActiveLocale(router: LinguiRouter): string | null {
+  return clientActiveLocales.get(router) ?? null
+}
+
+export function setClientActiveLocale(
+  router: LinguiRouter,
+  locale: string,
+): void {
+  clientActiveLocales.set(router, locale)
+}
+
 async function readActionPayload(
   request: Request,
 ): Promise<{ locale: string | null; redirectTo: string } | null> {
@@ -66,6 +79,10 @@ export function createLocaleAction(router: LinguiRouter) {
     for (const persistence of router.config.persistence ?? []) {
       const result = await persistence.write({ request } as never, locale)
       appendHeaders(headers, result)
+    }
+
+    if (!router.config.server || typeof document !== 'undefined') {
+      setClientActiveLocale(router, locale)
     }
 
     const safeRedirectTo = safeRedirectPath(redirectTo)

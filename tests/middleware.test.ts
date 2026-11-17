@@ -10,13 +10,16 @@ import {
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
   clientDetectors,
+  clientPersistence,
   createLinguiClientMiddleware,
   createLinguiMiddleware,
   createLinguiRootLoader,
   createLinguiRouter,
   createLinguiShouldRevalidate,
+  createLocaleAction,
   linguiRouterContext,
   serverDetectors,
+  serverPersistence,
   type LinguiRootLoaderData,
   type LinguiState,
 } from '../src/index'
@@ -1440,5 +1443,132 @@ describe('middleware mutation edge cases', () => {
         pattern: '*',
       }),
     ).rejects.toThrow(/Lingui state was not found in React Router context/)
+  })
+
+  it('client middleware preserves active non-default locale on subsequent unprefixed navigation', async () => {
+    let persistedLocale: string | null = 'ar'
+    const router = createLinguiRouter({
+      server: false,
+      mode: 'url-prefix',
+      locales: ['ar', 'en'],
+      defaultLocale: 'ar',
+      prefixDefaultLocale: false,
+      detection: [clientDetectors.custom({ detect: () => persistedLocale })],
+      persistence: [
+        clientPersistence.custom({
+          read: () => persistedLocale,
+          write: (_ctx, locale) => {
+            persistedLocale = locale
+          },
+        }),
+      ],
+      catalogs: {
+        ar: async () => ({ messages: {} }),
+        en: async () => ({ messages: {} }),
+      },
+    })
+    const middleware = createLinguiClientMiddleware(router)
+
+    // 1. Visiting /en/about syncs active locale and persistence to 'en'
+    const enContext = new RouterContextProvider()
+    await middleware(
+      {
+        request: new Request('https://example.com/en/about'),
+        url: new URL('https://example.com/en/about'),
+        context: enContext,
+        params: {},
+        pattern: '*',
+      },
+      async () => ({}),
+    )
+    expect(persistedLocale).toBe('en')
+    expect(enContext.get(linguiRouterContext)?.locale).toBe('en')
+
+    // 2. Plain <Link to="/"> or <Link to="/#faq"> redirects to /en without a wrapper
+    const homeRes = await middleware(
+      {
+        request: new Request('https://example.com/'),
+        url: new URL('https://example.com/'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      },
+      async () => ({}),
+    )
+    const redirectResponse = homeRes as unknown as Response
+    expect(redirectResponse.status).toBe(302)
+    expect(redirectResponse.headers.get('Location')).toBe('/en')
+
+    // 3. Explicit /change-locale back to 'ar' updates active locale so / stays in 'ar'
+    const action = createLocaleAction(router)
+    const form = new FormData()
+    form.set('locale', 'ar')
+    form.set('redirectTo', '/en/about')
+    await action({
+      request: new Request('https://example.com/change-locale', {
+        method: 'POST',
+        body: form,
+      }),
+    })
+    expect(persistedLocale).toBe('ar')
+
+    const arHomeContext = new RouterContextProvider()
+    const arHomeRes = await middleware(
+      {
+        request: new Request('https://example.com/'),
+        url: new URL('https://example.com/'),
+        context: arHomeContext,
+        params: {},
+        pattern: '*',
+      },
+      async () => ({}),
+    )
+    expect(arHomeRes).toEqual({})
+    expect(arHomeContext.get(linguiRouterContext)?.locale).toBe('ar')
+  })
+
+  it('server middleware syncs stale persistence cookie on canonical locale paths only when changed', async () => {
+    const router = createLinguiRouter({
+      server: true,
+      mode: 'url-prefix',
+      locales: ['ar', 'en'],
+      defaultLocale: 'ar',
+      prefixDefaultLocale: false,
+      detection: [serverDetectors.cookie('locale')],
+      persistence: [serverPersistence.cookie('locale')],
+      catalogs: {
+        ar: async () => ({ messages: {} }),
+        en: async () => ({ messages: {} }),
+      },
+    })
+    const middleware = createLinguiMiddleware(router)
+
+    const staleRes = (await middleware(
+      {
+        request: new Request('https://example.com/en/about', {
+          headers: { Cookie: 'locale=ar' },
+        }),
+        url: new URL('https://example.com/en/about'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      },
+      async () => new Response('ok'),
+    )) as Response
+    expect(staleRes.headers.get('Set-Cookie')).toContain('locale=en')
+
+    const freshRes = (await middleware(
+      {
+        request: new Request('https://example.com/en/about', {
+          headers: { Cookie: 'locale=en' },
+        }),
+        url: new URL('https://example.com/en/about'),
+        context: new RouterContextProvider(),
+        params: {},
+        pattern: '*',
+      },
+      async () => new Response('ok'),
+    )) as Response
+    expect(freshRes.headers.get('Set-Cookie')).toBeNull()
   })
 })
