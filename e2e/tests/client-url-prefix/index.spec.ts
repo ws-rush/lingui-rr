@@ -1,5 +1,12 @@
-import { expect, test } from '@playwright/test'
-import { assertArabic, assertEnglish, switchTo } from '../_helpers'
+import {
+  assertAboutArabic,
+  assertAboutEnglish,
+  assertArabic,
+  assertEnglish,
+  expect,
+  switchTo,
+  test,
+} from '../_helpers'
 
 // Client-only (server: false) + url-prefix with prefixDefaultLocale: false.
 // The default locale is hidden (`/` is English); `/ar` is Arabic. The client
@@ -71,8 +78,46 @@ test.describe('client-url-prefix', () => {
     await assertArabic(page)
   })
 
-  test('does not redirect ignored paths', async ({ page }) => {
-    await page.goto('/api/data')
+  test('does not redirect ignored paths and renders /api/data cleanly', async ({
+    page,
+  }) => {
+    const response = await page.goto('/api/data')
+    expect(response?.status()).toBe(200)
     await expect(page).toHaveURL(/\/api\/data$/)
+    await expect(page.getByTestId('api-data')).toHaveText('{"ok":true}')
+  })
+
+  test('navigates between home and /about via Link preserving active locale', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await assertEnglish(page)
+
+    await page.getByTestId('about-link').click()
+    await expect(page).toHaveURL(/\/about$/)
+    await assertAboutEnglish(page)
+
+    await page.goto('/ar')
+    await assertArabic(page)
+
+    await page.getByTestId('about-link').click()
+    await expect(page).toHaveURL(/\/ar\/about$/)
+    await assertAboutArabic(page)
+
+    await page.getByTestId('home-link').click()
+    await expect(page).toHaveURL(/\/ar\/?$/)
+    await assertArabic(page)
+  })
+
+  test('preserves query string on client redirect for /about', async ({
+    context,
+    page,
+  }) => {
+    await context.addCookies([
+      { name: 'locale', value: 'ar', url: 'http://127.0.0.1:3103' },
+    ])
+    await page.goto('/about?tab=1#sec')
+    await expect(page).toHaveURL(/\/ar\/about\?tab=1/)
+    await assertAboutArabic(page)
   })
 })

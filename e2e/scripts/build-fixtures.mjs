@@ -64,8 +64,9 @@ const tsconfig = `{
 const viteEnv = `/// <reference types="vite/client" />\n`
 
 const homeTsx = `import { useLingui } from '@lingui/react'
-import { Form, useLocation } from 'react-router'
+import { Form, Link, useLocation } from 'react-router'
 import { useLinguiRouter } from 'lingui-rr'
+import { localizePath } from '../lib/i18n'
 
 export default function Home() {
   const { _ } = useLingui()
@@ -76,6 +77,11 @@ export default function Home() {
       <h1 data-testid="greeting">{_('greeting')}</h1>
       <p data-testid="locale">{locale}</p>
       <p data-testid="dir">{localeMeta.dir}</p>
+      <nav>
+        <Link data-testid="about-link" to={localizePath('/about', locale)}>
+          {_('aboutLink')}
+        </Link>
+      </nav>
       <Form method="post" action="/change-locale" data-testid="switch-form">
         <input name="redirectTo" type="hidden" value={location.pathname} />
         <button data-testid="switch-en" name="locale" type="submit" value="en">English</button>
@@ -83,6 +89,47 @@ export default function Home() {
       </Form>
     </main>
   )
+}
+`
+
+const aboutTsx = `import { useLingui } from '@lingui/react'
+import { Link } from 'react-router'
+import { useLinguiRouter } from 'lingui-rr'
+import { localizePath } from '../lib/i18n'
+
+export default function About() {
+  const { _ } = useLingui()
+  const { locale, localeMeta } = useLinguiRouter()
+  return (
+    <main>
+      <h1 data-testid="about-title">{_('aboutTitle')}</h1>
+      <p data-testid="about-body">{_('aboutBody')}</p>
+      <p data-testid="locale">{locale}</p>
+      <p data-testid="dir">{localeMeta.dir}</p>
+      <nav>
+        <Link data-testid="home-link" to={localizePath('/', locale)}>
+          {_('homeLink')}
+        </Link>
+      </nav>
+    </main>
+  )
+}
+`
+
+const apiDataSsrTs = `export function loader() {
+  return Response.json({ ok: true })
+}
+`
+
+const apiDataClientTsx = `import { useLoaderData } from 'react-router'
+
+export function clientLoader() {
+  return { ok: true }
+}
+
+export default function ApiData() {
+  const data = useLoaderData<typeof clientLoader>()
+  return <pre data-testid="api-data">{JSON.stringify(data)}</pre>
 }
 `
 
@@ -166,10 +213,26 @@ export const ${f.client ? 'clientAction' : 'action'} = createLocaleAction(i18n)
 const locales = `  en: { label: 'English', dir: 'ltr' },
   ar: { label: 'العربية', dir: 'rtl' },`
 
-const catalogs = `      en: async () => ({ messages: { greeting: 'Hello from lingui-rr' } }),
-      ar: async () => ({ messages: { greeting: 'مرحبا من lingui-rr' } }),`
+const catalogs = `      en: async () => ({
+        messages: {
+          greeting: 'Hello from lingui-rr',
+          aboutLink: 'About',
+          aboutTitle: 'About lingui-rr',
+          aboutBody: 'About page content',
+          homeLink: 'Home',
+        },
+      }),
+      ar: async () => ({
+        messages: {
+          greeting: 'مرحبا من lingui-rr',
+          aboutLink: 'حول',
+          aboutTitle: 'حول lingui-rr',
+          aboutBody: 'محتوى صفحة حول',
+          homeLink: 'الرئيسية',
+        },
+      }),`
 
-const ignorePaths = `    ignorePaths: [/^\\/assets\\//, /^\\/api\\//, /^\\/change-locale(?:\\.data)?$/],`
+const ignorePaths = `  ignorePaths: [/^\\/assets\\//, /^\\/api\\//, /^\\/change-locale(?:\\.data)?$/],`
 
 /**
  * @typedef {{ ssr: boolean, context: boolean, prefix: boolean, client: boolean }} Flags
@@ -200,8 +263,8 @@ ${f.context ? '' : '  prefixDefaultLocale: false,\n'}  detection: ${
   persistence: ${f.context ? "[clientPersistence.localStorage('locale')]" : "[clientPersistence.cookie('locale')]"},`
 
   const importBlock = f.client
-    ? `import { clientDetectors, clientPersistence, createLinguiRouter } from 'lingui-rr'`
-    : `import { createLinguiRouter, serverDetectors, serverPersistence } from 'lingui-rr'`
+    ? `import { clientDetectors, clientPersistence, createLinguiRouter, rewriteLocalePath } from 'lingui-rr'`
+    : `import { createLinguiRouter, rewriteLocalePath, serverDetectors, serverPersistence } from 'lingui-rr'`
 
   return `// Auto-generated fixture. ${f.client ? 'Client-only (server: false)' : 'SSR (server: true)'}, mode: ${f.context ? 'context' : 'url-prefix'}.
 ${importBlock}
@@ -215,6 +278,15 @@ ${ignorePaths}
 ${catalogs}
   },
 })
+
+export function localizePath(path: string, locale: string): string {
+  if (i18n.config.mode !== 'url-prefix') return path
+  return rewriteLocalePath(path, locale, i18n.localeCodes, {
+    defaultLocale: i18n.defaultLocale,
+    prefixDefaultLocale: i18n.config.prefixDefaultLocale,
+    ignorePaths: i18n.config.ignorePaths,
+  })
+}
 `
 }
 
@@ -304,15 +376,28 @@ export default function App() {
 
 /** @param {Flags} f */
 function routesTs(f) {
+  const apiRoute = f.client
+    ? "route('api/data', 'routes/api.data.tsx')"
+    : "route('api/data', 'routes/api.data.ts')"
+
   return `// Auto-generated fixture.
 import { type RouteConfig, index, route } from '@react-router/dev/routes'
 
 ${
   f.context
-    ? `export default [index('routes/home.tsx'), route('change-locale', 'routes/change-locale.ts')] satisfies RouteConfig`
-    : `export default [
-  route(':lang?', 'routes/layout.tsx', [index('routes/home.tsx')]),
+    ? `export default [
+  index('routes/home.tsx'),
+  route('about', 'routes/about.tsx'),
   route('change-locale', 'routes/change-locale.ts'),
+  ${apiRoute},
+] satisfies RouteConfig`
+    : `export default [
+  route(':lang?', 'routes/layout.tsx', [
+    index('routes/home.tsx'),
+    route('about', 'routes/about.tsx'),
+  ]),
+  route('change-locale', 'routes/change-locale.ts'),
+  ${apiRoute},
 ] satisfies RouteConfig`
 }
 `
@@ -356,12 +441,16 @@ for (const [name, flags] of Object.entries(configs)) {
   await writeFile(join(app, 'routes.ts'), routesTs(flags))
   await writeFile(join(lib, 'i18n.ts'), i18nTsx(flags))
   await writeFile(join(routes, 'home.tsx'), homeTsx)
+  await writeFile(join(routes, 'about.tsx'), aboutTsx)
   await writeFile(join(routes, 'layout.tsx'), layoutTsx)
   await writeFile(join(routes, 'change-locale.ts'), changeLocaleTs(flags))
-  await writeFile(join(app, 'entry.client.tsx'), entryClientTsx)
-  if (!flags.client) {
+  if (flags.client) {
+    await writeFile(join(routes, 'api.data.tsx'), apiDataClientTsx)
+  } else {
+    await writeFile(join(routes, 'api.data.ts'), apiDataSsrTs)
     await writeFile(join(app, 'entry.server.tsx'), entryServerTsx)
   }
+  await writeFile(join(app, 'entry.client.tsx'), entryClientTsx)
 
   console.log('generated', name)
 }
