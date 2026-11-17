@@ -1,4 +1,5 @@
 import type {
+  CatalogLoader,
   DetectorKind,
   LocaleInput,
   LocaleMeta,
@@ -60,12 +61,23 @@ function normalizeRequiredLocale(
   return locale
 }
 
+function normalizeCatalogs(
+  catalogs: Record<string, CatalogLoader>,
+): Record<string, CatalogLoader> {
+  return Object.fromEntries(
+    Object.entries(catalogs).map(([locale, loader]) => [
+      normalizeLocaleCode(locale),
+      loader,
+    ]),
+  )
+}
+
 function assertCatalogs(
-  config: LinguiRouterConfig,
+  catalogs: Record<string, CatalogLoader>,
   localeCodes: readonly string[],
 ): void {
   for (const locale of localeCodes) {
-    if (!config.catalogs[locale])
+    if (!catalogs[locale])
       throw new Error(
         `[lingui-rr] config.catalogs: missing catalog loader for locale "${locale}". Provide a catalog for every locale in config.locales.`,
       )
@@ -128,12 +140,19 @@ export function validateConfig(config: LinguiRouterConfig): LinguiRouter {
     localeCodes,
   )
 
-  assertCatalogs(config, localeCodes)
+  const catalogs = normalizeCatalogs(config.catalogs)
+  assertCatalogs(catalogs, localeCodes)
   assertDetectorKinds(config)
   assertPersistenceKinds(config)
   assertUrlPrefixOptions(config)
 
-  return { config, locales, localeCodes, defaultLocale, fallbackLocale }
+  return {
+    config: { ...config, catalogs },
+    locales,
+    localeCodes,
+    defaultLocale,
+    fallbackLocale,
+  }
 }
 
 export function createLinguiRouter(config: LinguiRouterConfig): LinguiRouter {

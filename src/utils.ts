@@ -3,7 +3,7 @@ import type { CookieOptions } from './types'
 export function normalizeLocaleCode(locale: string): string {
   return locale
     .trim()
-    .split('-')
+    .split(/[-_]/)
     .filter(Boolean)
     .map((part, index) => {
       const lower = part.toLowerCase()
