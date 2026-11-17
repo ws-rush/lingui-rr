@@ -1,5 +1,5 @@
 // Auto-generated fixture. Client-only (server: false), mode: url-prefix.
-import { clientDetectors, clientPersistence, createLinguiRouter } from 'lingui-rr'
+import { clientDetectors, clientPersistence, createLinguiRouter, rewriteLocalePath } from 'lingui-rr'
 
 export const defaultLocale = 'en'
 
@@ -14,9 +14,34 @@ export const i18n = createLinguiRouter({
   prefixDefaultLocale: false,
   detection: [clientDetectors.cookie('locale'), clientDetectors.navigator()],
   persistence: [clientPersistence.cookie('locale')],
-    ignorePaths: [/^\/assets\//, /^\/api\//, /^\/change-locale(?:\.data)?$/],
+  ignorePaths: [/^\/assets\//, /^\/api\//, /^\/change-locale(?:\.data)?$/],
   catalogs: {
-      en: async () => ({ messages: { greeting: 'Hello from lingui-rr' } }),
-      ar: async () => ({ messages: { greeting: 'مرحبا من lingui-rr' } }),
+      en: async () => ({
+        messages: {
+          greeting: 'Hello from lingui-rr',
+          aboutLink: 'About',
+          aboutTitle: 'About lingui-rr',
+          aboutBody: 'About page content',
+          homeLink: 'Home',
+        },
+      }),
+      ar: async () => ({
+        messages: {
+          greeting: 'مرحبا من lingui-rr',
+          aboutLink: 'حول',
+          aboutTitle: 'حول lingui-rr',
+          aboutBody: 'محتوى صفحة حول',
+          homeLink: 'الرئيسية',
+        },
+      }),
   },
 })
+
+export function localizePath(path: string, locale: string): string {
+  if (i18n.config.mode !== 'url-prefix') return path
+  return rewriteLocalePath(path, locale, i18n.localeCodes, {
+    defaultLocale: i18n.defaultLocale,
+    prefixDefaultLocale: i18n.config.prefixDefaultLocale,
+    ignorePaths: i18n.config.ignorePaths,
+  })
+}

@@ -58,13 +58,13 @@ async function syncPersistence(
 
   for (const persistence of persistences) {
     if (persistence.read) {
-      const current = await persistence.read({ request } as never)
+      const current = await persistence.read({ request })
       const normalized = current
         ? matchSupportedLocale(current, router.localeCodes, '')
         : ''
       if (normalized === locale) continue
     }
-    const result = await persistence.write({ request } as never, locale)
+    const result = await persistence.write({ request }, locale)
     if (result) {
       appendHeaders(headers, result)
       hasHeaders = true

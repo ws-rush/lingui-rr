@@ -12,7 +12,7 @@ export async function runDetectors(
   fallbackLocale: string,
 ): Promise<string> {
   for (const detector of detectors) {
-    const detected = await detector.detect(ctx as never)
+    const detected = await detector.detect(ctx)
     if (!detected) continue
     const matched = matchSupportedLocale(detected, supportedLocales, '')
     if (matched) return matched

@@ -24,6 +24,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [reactRouter()],
   cacheDir: './.vite',
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router', '@lingui/core', '@lingui/react'],
+  },
   optimizeDeps: {
     include: [
       'react',

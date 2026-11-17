@@ -1,4 +1,4 @@
 [tools]
 act = "latest"
-node = "22.22"
+node = "26"
 pnpm = "10"

@@ -77,7 +77,7 @@ export function createLocaleAction(router: LinguiRouter) {
     const headers = new Headers()
 
     for (const persistence of router.config.persistence ?? []) {
-      const result = await persistence.write({ request } as never, locale)
+      const result = await persistence.write({ request }, locale)
       appendHeaders(headers, result)
     }
 

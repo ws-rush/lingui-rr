@@ -1,0 +1,170 @@
+name: lingui-sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run upgrade and release check even if @lingui/core version matches'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: lingui-sync
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  sync-and-release:
+    name: Sync dependencies with Lingui and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      tag: ${{ steps.check.outputs.tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node and pnpm
+        uses: ./.github/actions/setup-pnpm
+
+      - name: Check latest Lingui release
+        id: check
+        env:
+          FORCE_RUN: ${{ inputs.force }}
+        run: |
+          LATEST_CORE=$(npm view @lingui/core version)
+          LATEST_REACT=$(npm view @lingui/react version)
+          SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          if ! [[ "$LATEST_CORE" =~ $SEMVER_RE ]] || ! [[ "$LATEST_REACT" =~ $SEMVER_RE ]]; then
+            echo "Unexpected version string from npm: core=${LATEST_CORE}, react=${LATEST_REACT}"
+            exit 1
+          fi
+
+          CURRENT_CORE=$(node -p "require('./package.json').devDependencies['@lingui/core'].replace(/^[\^~]/, '')")
+          CURRENT_PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG="v${LATEST_CORE}"
+
+          echo "latest_core=${LATEST_CORE}" >> "$GITHUB_OUTPUT"
+          echo "latest_react=${LATEST_REACT}" >> "$GITHUB_OUTPUT"
+          echo "current_core=${CURRENT_CORE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ "$LATEST_CORE" != "$LATEST_REACT" ]; then
+            echo "@lingui/core (${LATEST_CORE}) and @lingui/react (${LATEST_REACT}) are not on the same version yet."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$LATEST_CORE" = "$CURRENT_CORE" ] && [ "$LATEST_CORE" = "$CURRENT_PKG_VERSION" ] && [ "$FORCE_RUN" != "true" ]; then
+            echo "@lingui/core and lingui-rr are already at ${CURRENT_CORE}."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upgrade dependencies to latest
+        if: steps.check.outputs.should_run == 'true'
+        env:
+          LATEST_LINGUI: ${{ steps.check.outputs.latest_core }}
+        run: |
+          pnpm update -r --latest
+          node -e '
+            const fs = require("node:fs");
+            const pkgPath = "package.json";
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+            const major = process.env.LATEST_LINGUI.split(".")[0];
+            pkg.peerDependencies["@lingui/core"] = `^${major}.0.0`;
+            pkg.peerDependencies["@lingui/react"] = `^${major}.0.0`;
+            pkg.version = process.env.LATEST_LINGUI;
+            fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+          '
+          pnpm install --no-frozen-lockfile
+          pnpm format
+
+      - name: Lint
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm lint
+
+      - name: Format check
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm format:check
+
+      - name: Typecheck
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm typecheck
+
+      - name: Unit tests
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm test
+
+      - name: Build library
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm build
+
+      - name: Cache Playwright browsers
+        if: steps.check.outputs.should_run == 'true'
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package.json') }}
+
+      - name: Install Playwright browsers (if not cached)
+        if: steps.check.outputs.should_run == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @lingui-rr/e2e install-browsers
+
+      - name: Run E2E tests
+        if: steps.check.outputs.should_run == 'true'
+        run: pnpm test:e2e
+
+      - name: Commit, tag, and create GitHub release
+        if: steps.check.outputs.should_run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.check.outputs.tag }}
+          VERSION: ${{ steps.check.outputs.latest_core }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add package.json e2e/package.json pnpm-lock.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): v${VERSION}"
+            git push origin HEAD:main
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            git tag -a "${TAG}" -m "Release ${TAG}"
+            git push origin "${TAG}"
+          fi
+
+          if ! gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release create "${TAG}" --title "${TAG}" --generate-notes
+          fi
+
+  publish:
+    name: Publish to npm
+    needs: sync-and-release
+    if: needs.sync-and-release.outputs.should_run == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      ref: ${{ needs.sync-and-release.outputs.tag }}
