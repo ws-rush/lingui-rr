@@ -43,4 +43,9 @@ jobs:
       - name: Publish package
         run: |
           pnpm pack
-          npm publish lingui-rr-*.tgz --provenance
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" == *-* ]]; then
+            npm publish lingui-rr-*.tgz --provenance --tag next
+          else
+            npm publish lingui-rr-*.tgz --provenance
+          fi
