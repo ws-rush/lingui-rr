@@ -1036,6 +1036,67 @@ describe('createLinguiClientMiddleware runtime execution', () => {
     expect(canonicalResult).toBe(expectedResult)
     expect(canonicalContext.get(linguiRouterContext)?.locale).toBe('en')
   })
+
+  it('preserves pending navigation hash on client redirect when Request.url stripped it', async () => {
+    const router = createLinguiRouter({
+      server: false,
+      mode: 'url-prefix',
+      locales: ['ar', 'en'],
+      defaultLocale: 'ar',
+      prefixDefaultLocale: false,
+      detection: [clientDetectors.custom({ detect: () => 'en' })],
+      catalogs: {
+        ar: async () => ({ messages: {} }),
+        en: async () => ({ messages: {} }),
+      },
+    })
+    const clientMiddleware = createLinguiClientMiddleware(router)
+
+    const previousWindow = globalThis.window
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {
+        __reactRouterDataRouter: {
+          state: {
+            navigation: {
+              location: {
+                pathname: '/',
+                search: '',
+                hash: '#faq',
+              },
+            },
+          },
+        },
+      },
+    })
+
+    try {
+      const redirectResult = await clientMiddleware(
+        {
+          request: new Request('https://example.com/'),
+          url: new URL('https://example.com/'),
+          context: new RouterContextProvider(),
+          params: {},
+          pattern: '*',
+        },
+        async () => ({}),
+      )
+
+      expect(redirectResult).toBeInstanceOf(Response)
+      const redirectResponse = redirectResult as unknown as Response
+      expect(redirectResponse.status).toBe(302)
+      expect(redirectResponse.headers.get('Location')).toBe('/en#faq')
+    } finally {
+      if (previousWindow === undefined) {
+        Reflect.deleteProperty(globalThis, 'window')
+      } else {
+        Object.defineProperty(globalThis, 'window', {
+          configurable: true,
+          value: previousWindow,
+        })
+      }
+    }
+  })
 })
 
 // Faithful essence of React Router's `SerializeFrom` (from

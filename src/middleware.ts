@@ -113,13 +113,45 @@ type ParsedRequestPath = {
   isSingleFetch: boolean
 }
 
-function parseRequestPath(request: Request): ParsedRequestPath {
+function getClientNavigationHash(pathname: string, search: string): string {
+  if (typeof window === 'undefined') return ''
+  const navLocation = (
+    window as Window & {
+      __reactRouterDataRouter?: {
+        state?: {
+          navigation?: {
+            location?: {
+              pathname?: string
+              search?: string
+              hash?: string
+            }
+          }
+        }
+      }
+    }
+  ).__reactRouterDataRouter?.state?.navigation?.location
+  if (
+    navLocation?.pathname === pathname &&
+    (navLocation.search ?? '') === search &&
+    navLocation.hash
+  ) {
+    return navLocation.hash
+  }
+  return ''
+}
+
+function parseRequestPath(
+  request: Request,
+  isClient = false,
+): ParsedRequestPath {
   const url = new URL(request.url)
   const isSingleFetch = url.pathname.endsWith('.data')
   const pathname = isSingleFetch ? url.pathname.slice(0, -5) : url.pathname
+  const hash =
+    url.hash || (isClient ? getClientNavigationHash(pathname, url.search) : '')
   return {
     pathname,
-    hrefPath: `${pathname}${url.search}${url.hash}`,
+    hrefPath: `${pathname}${url.search}${hash}`,
     isSingleFetch,
   }
 }
@@ -260,7 +292,7 @@ function createLinguiMiddlewareImpl(
   isClient: boolean,
 ): LinguiMiddlewareFunction {
   return async (args, next) => {
-    const requestPath = parseRequestPath(args.request)
+    const requestPath = parseRequestPath(args.request, isClient)
 
     if (router.config.mode !== 'url-prefix') {
       const locale = await resolveDetectedLocale(router, args.request)
