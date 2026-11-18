@@ -16,10 +16,10 @@ runs:
     # Reads the `packageManager` field — must run before setup-node so the pnpm
     # cache key resolves correctly.
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
 
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
