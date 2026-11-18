@@ -1,6 +1,6 @@
 {
   "name": "lingui-rr",
-  "version": "6.12.1",
+  "version": "6.12.2",
   "description": "React Router v8 framework-mode integration for Lingui.",
   "type": "module",
   "license": "MIT",
