@@ -59,8 +59,9 @@ jobs:
           fi
 
           TARGET_VERSION=$(LATEST_CORE="$LATEST_CORE" CURRENT_CORE="$CURRENT_CORE" CURRENT_PKG_VERSION="$CURRENT_PKG_VERSION" FORCE_RUN="$FORCE_RUN" node -e '
-            const [lMaj, lMin, lPat] = process.env.LATEST_CORE.split(".").map(Number);
-            const [pMaj, pMin, pPat] = process.env.CURRENT_PKG_VERSION.split(".").map(Number);
+            const parse = (v) => v.split("-")[0].split(".").map(Number);
+            const [lMaj, lMin, lPat] = parse(process.env.LATEST_CORE);
+            const [pMaj, pMin, pPat] = parse(process.env.CURRENT_PKG_VERSION);
             const basePatch = lPat * 100;
             const sameMinor = pMaj === lMaj && pMin === lMin;
             let nextPatch = basePatch;
