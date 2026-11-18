@@ -51,12 +51,6 @@ jobs:
 
           CURRENT_CORE=$(node -p "require('./package.json').devDependencies['@lingui/core'].replace(/^[\^~]/, '')")
           CURRENT_PKG_VERSION=$(node -p "require('./package.json').version")
-          TAG="v${LATEST_CORE}"
-
-          echo "latest_core=${LATEST_CORE}" >> "$GITHUB_OUTPUT"
-          echo "latest_react=${LATEST_REACT}" >> "$GITHUB_OUTPUT"
-          echo "current_core=${CURRENT_CORE}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
           if [ "$LATEST_CORE" != "$LATEST_REACT" ]; then
             echo "@lingui/core (${LATEST_CORE}) and @lingui/react (${LATEST_REACT}) are not on the same version yet."
@@ -64,14 +58,35 @@ jobs:
             exit 0
           fi
 
+          TARGET_VERSION=$(LATEST_CORE="$LATEST_CORE" CURRENT_CORE="$CURRENT_CORE" CURRENT_PKG_VERSION="$CURRENT_PKG_VERSION" FORCE_RUN="$FORCE_RUN" node -e '
+            const [lMaj, lMin, lPat] = process.env.LATEST_CORE.split(".").map(Number);
+            const [pMaj, pMin, pPat] = process.env.CURRENT_PKG_VERSION.split(".").map(Number);
+            const basePatch = lPat * 100;
+            const sameMinor = pMaj === lMaj && pMin === lMin;
+            let nextPatch = basePatch;
+            if (sameMinor && pPat >= basePatch) {
+              nextPatch = process.env.LATEST_CORE === process.env.CURRENT_CORE && process.env.FORCE_RUN !== "true"
+                ? pPat
+                : pPat + 1;
+            }
+            process.stdout.write(`${lMaj}.${lMin}.${nextPatch}`);
+          ')
+          TAG="v${TARGET_VERSION}"
+
+          echo "latest_core=${LATEST_CORE}" >> "$GITHUB_OUTPUT"
+          echo "latest_react=${LATEST_REACT}" >> "$GITHUB_OUTPUT"
+          echo "current_core=${CURRENT_CORE}" >> "$GITHUB_OUTPUT"
+          echo "target_version=${TARGET_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             echo "Tag ${TAG} already exists."
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ "$LATEST_CORE" = "$CURRENT_CORE" ] && [ "$LATEST_CORE" = "$CURRENT_PKG_VERSION" ] && [ "$FORCE_RUN" != "true" ]; then
-            echo "@lingui/core and lingui-rr are already at ${CURRENT_CORE}."
+          if [ "$LATEST_CORE" = "$CURRENT_CORE" ] && [ "$TARGET_VERSION" = "$CURRENT_PKG_VERSION" ] && [ "$FORCE_RUN" != "true" ]; then
+            echo "@lingui/core is at ${CURRENT_CORE} and lingui-rr is at ${CURRENT_PKG_VERSION}."
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -82,6 +97,7 @@ jobs:
         if: steps.check.outputs.should_run == 'true'
         env:
           LATEST_LINGUI: ${{ steps.check.outputs.latest_core }}
+          TARGET_VERSION: ${{ steps.check.outputs.target_version }}
         run: |
           pnpm update -r --latest
           node -e '
@@ -91,7 +107,7 @@ jobs:
             const major = process.env.LATEST_LINGUI.split(".")[0];
             pkg.peerDependencies["@lingui/core"] = `^${major}.0.0`;
             pkg.peerDependencies["@lingui/react"] = `^${major}.0.0`;
-            pkg.version = process.env.LATEST_LINGUI;
+            pkg.version = process.env.TARGET_VERSION;
             fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
           '
           pnpm install --no-frozen-lockfile
@@ -138,7 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.check.outputs.tag }}
-          VERSION: ${{ steps.check.outputs.latest_core }}
+          VERSION: ${{ steps.check.outputs.target_version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
