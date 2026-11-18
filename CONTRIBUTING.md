@@ -10,7 +10,7 @@ This project uses `pnpm` workspaces for local development and E2E test orchestra
 
 ### Prerequisites
 
-- **Node.js**: `v22.22` or newer (matching `mise.toml` / `engines`)
+- **Node.js**: `v26.0.0` or newer (matching `mise.toml` / `engines`)
 - **pnpm**: `v10.10.0` or newer
 
 ### Installation
@@ -68,7 +68,7 @@ During development, you can run the following validation scripts:
 
 ## How to Publish
 
-We use the interactive version bumping tool `bumpp` to manage version upgrades, git commits, tags, and pushes in a single, simple command.
+We use `bumpp` to manage patch version upgrades (`<linguiMajor>.<linguiMinor>.<linguiPatch * 100 + own>`), git commits, tags, and pushes in a single command.
 
 ### Release Workflow
 
@@ -76,7 +76,7 @@ We use the interactive version bumping tool `bumpp` to manage version upgrades, 
    ```bash
    pnpm release
    ```
-2. You will be prompted to choose the version bump type:
+2. Confirm the patch bump (for example `6.12.2` -> `6.12.3`, or `6.12.100` -> `6.12.101`) so the version stays aligned with Lingui's `major.minor` and encoded patch range:
    ```txt
    ? Select new version:
    > patch (0.1.1)

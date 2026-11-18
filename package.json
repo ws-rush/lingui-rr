@@ -41,7 +41,7 @@
     "format:check": "oxfmt . --check --ignore-path .gitignore",
     "format": "oxfmt . --write --ignore-path .gitignore",
     "build": "rm -rf dist && vite build",
-    "release": "bumpp",
+    "release": "bumpp patch",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
